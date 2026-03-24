@@ -10,11 +10,12 @@ The tool extracts face embeddings from your training dataset (reference identity
 
 ## Features
 
-- **Guided wizard UI** — step-by-step setup: select trainer, browse workspace, pick training run, choose steps
+- **Multi-run comparison** — select multiple training runs to compare different settings side by side
+- **Guided wizard UI** — step-by-step setup: select trainer, browse workspace, pick training runs, choose steps
 - **Native folder picker** — no manual path typing needed
 - **Auto-detection** — dataset path and sample mappings are parsed from training configs
-- **Tier list results** — S/A/B/C/D ranking with expandable image previews
-- **Similarity chart** — visualize face likeness over training steps to spot the sweet spot
+- **Tier list results** — S/A/B/C/D ranking with expandable image previews, collapsible with "show more"
+- **Multi-line similarity chart** — each run gets its own colored line for easy visual comparison
 - **GPU accelerated** — uses CUDA via onnxruntime-gpu when available, falls back to CPU
 - **Modular trainer support** — pluggable architecture for different training tools
 
@@ -49,25 +50,22 @@ The tool extracts face embeddings from your training dataset (reference identity
 
 The default `requirements.txt` installs `onnxruntime-gpu`. If you don't have an NVIDIA GPU, replace it with `onnxruntime` in `requirements.txt` before running.
 
-For GPU support, cuDNN is auto-resolved via pip (`nvidia-cudnn-cu12`). If you see CUDA provider errors in the console, install it manually:
-
-```
-pip install nvidia-cudnn-cu12
-```
+GPU support dependencies (cuDNN and cuBLAS) are included in `requirements.txt` and installed automatically.
 
 ## Usage (OneTrainer)
 
 1. Select **OneTrainer** from the trainer dropdown
 2. Click **Browse** and select your `workspace\run` folder
-3. Pick a **training run** from the list — the dataset path is auto-detected from the config
+3. Pick one or **multiple training runs** from the list (click to toggle selection) — dataset paths are auto-detected from configs
 4. Choose which **steps** to compare (all or a specific range)
 5. Click **Run Comparison**
 
 The tool will:
-- Extract face embeddings from your reference dataset
-- For each selected step, collect sample images across all prompt folders
+- Extract face embeddings from your reference dataset (cached if shared across runs)
+- For each selected run and step, collect sample images across all prompt folders
 - Compare each sample face against the reference identity
-- Rank all steps by average similarity
+- Rank all steps across all runs by average similarity
+- Display a combined tier list and a chart with one colored line per run
 
 ## How It Works
 

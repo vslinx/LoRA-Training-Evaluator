@@ -421,7 +421,7 @@
   }
 
   /* ── Tier List ── */
-  .tier-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 40px; }
+  .tier-list { display: flex; flex-direction: column; gap: 3px; }
 
   .tier-item {
     border-radius: 8px;
@@ -656,6 +656,111 @@
     border-top: 1px solid var(--border);
     margin: 4px 0;
   }
+
+  /* Multi-select config cards */
+  .config-card.selected {
+    border-color: var(--neon-pink);
+    background: var(--neon-pink-dim);
+    box-shadow: 0 0 12px var(--neon-pink-dim);
+  }
+
+  .config-card .config-check {
+    float: right;
+    color: var(--neon-green);
+    font-size: 0.9em;
+    font-weight: 700;
+    display: none;
+  }
+
+  .config-card.selected .config-check { display: inline; }
+
+  /* Run label badge in tier list */
+  .tier-banner .tier-run-label {
+    font-size: 0.7em;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* Tier list show more */
+  .tier-list-wrapper {
+    position: relative;
+    margin-bottom: 40px;
+  }
+
+  .tier-list-overflow {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .tier-list-wrapper.collapsed .tier-list-overflow {
+    max-height: 0;
+    overflow: hidden;
+  }
+
+  .tier-list-wrapper.collapsed .tier-fade-item {
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  }
+
+  .tier-show-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    margin-top: 6px;
+    cursor: pointer;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.25s ease;
+    user-select: none;
+  }
+
+  .tier-show-more:hover {
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+    background: var(--neon-pink-dim);
+  }
+
+  .tier-show-more .tier-show-more-arrow {
+    margin-left: 8px;
+    transition: transform 0.25s ease;
+  }
+
+  .tier-list-wrapper:not(.collapsed) .tier-show-more .tier-show-more-arrow {
+    transform: rotate(180deg);
+  }
+
+  /* Chart legend for multi-run */
+  .chart-legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8em;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+  }
+
+  .chart-legend-swatch {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+  }
 </style>
 </head>
 <body>
@@ -761,7 +866,14 @@
       <div class="top5" id="top5"></div>
 
       <h2>Tier List</h2>
-      <div class="tier-list" id="tierList"></div>
+      <div class="tier-list-wrapper collapsed" id="tierListWrapper">
+        <div class="tier-list" id="tierList"></div>
+        <div class="tier-list-overflow" id="tierListOverflow"></div>
+        <div class="tier-show-more" id="tierShowMore" onclick="toggleTierList()" style="display:none">
+          <span id="tierShowMoreText">Show all</span>
+          <span class="tier-show-more-arrow">&#9660;</span>
+        </div>
+      </div>
 
       <h2>Similarity Over Training Steps</h2>
       <div class="chart-container">
@@ -783,10 +895,20 @@
 let selectedTrainer = '';
 let workspacePath = '';
 let configs = [];
-let selectedConfig = null;
+let selectedConfigs = [];  // multi-select
 let scannedSteps = [];
 let selectMode = 'all';
 let chartInstance = null;
+
+const RUN_COLORS = [
+  {line: '#f472b6', fill: 'rgba(244, 114, 182, 0.15)'},
+  {line: '#67e8f9', fill: 'rgba(103, 232, 249, 0.15)'},
+  {line: '#c084fc', fill: 'rgba(192, 132, 252, 0.15)'},
+  {line: '#86efac', fill: 'rgba(134, 239, 172, 0.15)'},
+  {line: '#fcd34d', fill: 'rgba(252, 211, 77, 0.15)'},
+  {line: '#fb923c', fill: 'rgba(251, 146, 60, 0.15)'},
+  {line: '#93c5fd', fill: 'rgba(147, 197, 253, 0.15)'},
+];
 
 // ── Init: load trainers ──
 (async function init() {
@@ -825,7 +947,7 @@ function setWizardStep(step) {
 
 function onTrainerChange() {
   selectedTrainer = document.getElementById('trainerSelect').value;
-  selectedConfig = null;
+  selectedConfigs = [];
   configs = [];
   scannedSteps = [];
   document.getElementById('workspacePath').value = '';
@@ -834,7 +956,6 @@ function onTrainerChange() {
 
   if (selectedTrainer) {
     setWizardStep(2);
-    // Update label based on trainer
     const labels = {
       'onetrainer': 'Select the workspace\\run folder',
       'ai-toolkit': 'Select the output folder',
@@ -866,7 +987,6 @@ async function browseWorkspace() {
   document.getElementById('workspacePath').value = data.path;
   workspacePath = data.path;
 
-  // Validate
   const valRes = await fetch('/api/validate-workspace', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -879,7 +999,6 @@ async function browseWorkspace() {
     return;
   }
 
-  // Load configs
   await loadConfigs();
 }
 
@@ -898,6 +1017,7 @@ async function loadConfigs() {
 
   const data = await res.json();
   configs = data.configs;
+  selectedConfigs = [];
 
   const listEl = document.getElementById('configList');
   listEl.innerHTML = configs.map((c, i) => {
@@ -906,7 +1026,8 @@ async function loadConfigs() {
       ? `<span class="has-samples">${c.total_sample_images} samples (${c.steps.length} steps)</span>`
       : `<span class="no-samples">no samples found</span>`;
 
-    return `<div class="config-card" onclick="selectConfig(${i})" id="config-${i}">
+    return `<div class="config-card" onclick="toggleConfig(${i})" id="config-${i}">
+      <span class="config-check">\u2713</span>
       <div class="config-name">${c.output_name}</div>
       <div class="config-meta">
         ${c.start_time}<br>
@@ -918,43 +1039,69 @@ async function loadConfigs() {
   setWizardStep(3);
 }
 
-function selectConfig(index) {
-  // Deselect previous
-  document.querySelectorAll('.config-card').forEach(c => c.classList.remove('selected'));
-
+function toggleConfig(index) {
   const cfg = configs[index];
-  selectedConfig = cfg;
-  document.getElementById(`config-${index}`).classList.add('selected');
+  const card = document.getElementById(`config-${index}`);
+  const pos = selectedConfigs.indexOf(cfg);
 
-  // Show dataset info
+  if (pos >= 0) {
+    // Deselect
+    selectedConfigs.splice(pos, 1);
+    card.classList.remove('selected');
+  } else {
+    // Select
+    selectedConfigs.push(cfg);
+    card.classList.add('selected');
+  }
+
+  // Update details & step selection
+  if (selectedConfigs.length === 0) {
+    document.getElementById('configDetails').style.display = 'none';
+    scannedSteps = [];
+    setWizardStep(3);
+    return;
+  }
+
+  // Show info for selected runs
   const detailsEl = document.getElementById('configDetails');
   detailsEl.style.display = 'block';
 
-  const datasetDisplay = cfg.dataset_path
-    ? `<strong>Dataset:</strong> ${cfg.dataset_path}`
-    : '<span style="color:var(--neon-orange)">No dataset path found in config</span>';
+  if (selectedConfigs.length === 1) {
+    const c = selectedConfigs[0];
+    const datasetDisplay = c.dataset_path
+      ? `<strong>Dataset:</strong> ${c.dataset_path}`
+      : '<span style="color:var(--neon-orange)">No dataset path found in config</span>';
+    document.getElementById('datasetInfo').innerHTML =
+      `${datasetDisplay}<br><strong>Model:</strong> ${c.base_model}`;
+  } else {
+    document.getElementById('datasetInfo').innerHTML =
+      `<strong>${selectedConfigs.length} runs selected</strong><br>` +
+      selectedConfigs.map(c => c.output_name).join(', ');
+  }
 
-  document.getElementById('datasetInfo').innerHTML =
-    `${datasetDisplay}<br><strong>Model:</strong> ${cfg.base_model}`;
+  // Compute union of all steps
+  const allSteps = new Set();
+  let anySteps = false;
+  for (const c of selectedConfigs) {
+    for (const s of c.steps) { allSteps.add(s); anySteps = true; }
+  }
+  scannedSteps = [...allSteps].sort((a, b) => a - b);
 
-  if (cfg.steps.length === 0) {
+  if (!anySteps) {
     setWizardStep(3);
     document.getElementById('runBtn').disabled = true;
     return;
   }
 
-  // Populate step selection
-  scannedSteps = cfg.steps;
-
   document.getElementById('stepsInfo').innerHTML =
-    `<strong>${cfg.steps.length}</strong> steps: ${cfg.steps[0]} &rarr; ${cfg.steps[cfg.steps.length - 1]}`;
+    `<strong>${scannedSteps.length}</strong> steps: ${scannedSteps[0]} &rarr; ${scannedSteps[scannedSteps.length - 1]}`;
 
-  document.getElementById('rangeMin').value = cfg.steps[0];
-  document.getElementById('rangeMin').min = cfg.steps[0];
-  document.getElementById('rangeMin').max = cfg.steps[cfg.steps.length - 1];
-  document.getElementById('rangeMax').value = cfg.steps[cfg.steps.length - 1];
-  document.getElementById('rangeMax').min = cfg.steps[0];
-  document.getElementById('rangeMax').max = cfg.steps[cfg.steps.length - 1];
+  document.getElementById('rangeMin').value = scannedSteps[0];
+  document.getElementById('rangeMin').min = scannedSteps[0];
+  document.getElementById('rangeMin').max = scannedSteps[scannedSteps.length - 1];
+  document.getElementById('rangeMax').value = scannedSteps[scannedSteps.length - 1];
+  document.getElementById('rangeMax').min = scannedSteps[0];
+  document.getElementById('rangeMax').max = scannedSteps[scannedSteps.length - 1];
 
   updateSelectionInfo();
   setWizardStep(4);
@@ -979,6 +1126,12 @@ function getSelectedSteps() {
   return scannedSteps.filter(s => s >= min && s <= max);
 }
 
+function getSelectedStepsForConfig(cfg) {
+  const allSelected = getSelectedSteps();
+  const cfgStepSet = new Set(cfg.steps);
+  return allSelected.filter(s => cfgStepSet.has(s));
+}
+
 function updateSelectionInfo() {
   const selected = getSelectedSteps();
   document.getElementById('selectionInfo').textContent = `${selected.length} steps selected`;
@@ -986,8 +1139,8 @@ function updateSelectionInfo() {
 }
 
 function updateRunBtn() {
-  const ready = selectedTrainer && workspacePath && selectedConfig
-    && selectedConfig.steps.length > 0 && getSelectedSteps().length > 0;
+  const ready = selectedTrainer && workspacePath && selectedConfigs.length > 0
+    && scannedSteps.length > 0 && getSelectedSteps().length > 0;
   document.getElementById('runBtn').disabled = !ready;
 }
 
@@ -1004,46 +1157,65 @@ async function runComparison() {
   const progressLabel = document.getElementById('progressLabel');
   progressBar.style.width = '0%';
 
+  const isMulti = selectedConfigs.length > 1;
+
   const pollInterval = setInterval(async () => {
     try {
       const res = await fetch('/api/progress');
       const p = await res.json();
       if (p.phase === 'base') {
         progressBar.style.width = '5%';
-        progressLabel.textContent = 'Extracting reference faces...';
+        progressLabel.textContent = p.label || 'Extracting reference faces...';
       } else if (p.phase === 'compare' && p.total > 0) {
-        const pct = Math.round((p.current / p.total) * 100);
-        progressBar.style.width = pct + '%';
+        if (p.total_runs > 1) {
+          // Multi-run: compute overall progress
+          const runFraction = 1 / p.total_runs;
+          const overallPct = Math.round(((p.current_run - 1) / p.total_runs + (p.current / p.total) * runFraction) * 100);
+          progressBar.style.width = overallPct + '%';
+        } else {
+          const pct = Math.round((p.current / p.total) * 100);
+          progressBar.style.width = pct + '%';
+        }
         progressLabel.textContent = `Analyzing ${p.label} (${p.current}/${p.total})`;
       }
     } catch {}
   }, 500);
 
   try {
-    const res = await fetch('/api/run', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        trainer: selectedTrainer,
-        run_dir: workspacePath,
-        config_file: selectedConfig.config_file,
-        selected_steps: getSelectedSteps(),
-        dataset_folder: selectedConfig.dataset_path || null,
-      })
-    });
+    let data;
+    if (isMulti || selectedConfigs.length === 1) {
+      // Always use multi endpoint
+      const runs = selectedConfigs.map(cfg => ({
+        config_file: cfg.config_file,
+        selected_steps: getSelectedStepsForConfig(cfg),
+        dataset_folder: cfg.dataset_path || null,
+        label: cfg.output_name,
+      }));
 
-    clearInterval(pollInterval);
+      const res = await fetch('/api/run-multi', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          trainer: selectedTrainer,
+          run_dir: workspacePath,
+          runs: runs,
+        })
+      });
 
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.detail || 'Comparison failed');
-      document.getElementById('progressSection').style.display = 'none';
-      document.getElementById('instructions').style.display = 'block';
-      runBtn.disabled = false;
-      return;
+      clearInterval(pollInterval);
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || 'Comparison failed');
+        document.getElementById('progressSection').style.display = 'none';
+        document.getElementById('instructions').style.display = 'block';
+        runBtn.disabled = false;
+        return;
+      }
+
+      data = await res.json();
     }
 
-    const data = await res.json();
     displayResults(data);
 
   } catch (e) {
@@ -1069,25 +1241,57 @@ function displayResults(data) {
   document.getElementById('progressSection').style.display = 'none';
   document.getElementById('resultsSection').style.display = 'block';
 
-  const results = data.results;
+  const runs = data.runs;
+  const isMulti = runs.length > 1;
+
+  // Merge all results with run labels, sorted by similarity
+  const allResults = [];
+  runs.forEach((run, runIdx) => {
+    run.results.forEach(r => {
+      allResults.push({...r, runLabel: run.label, runIndex: runIdx});
+    });
+  });
+  allResults.sort((a, b) => b.average_similarity - a.average_similarity);
 
   // Top 5
   const top5El = document.getElementById('top5');
-  const top5 = results.slice(0, 5);
+  const top5 = allResults.slice(0, 5);
   top5El.innerHTML = top5.map((r, i) => {
     const pct = (r.average_similarity * 100).toFixed(1);
+    const runTag = isMulti
+      ? `<div style="font-size:0.7em; color:${RUN_COLORS[r.runIndex % RUN_COLORS.length].line}; margin-top:4px; font-family:'JetBrains Mono',monospace;">${r.runLabel}</div>`
+      : '';
     return `<div class="top5-card">
       <div class="rank">#${i+1}</div>
       <div class="step-name">${r.name}</div>
       <div class="pct">${pct}%</div>
+      ${runTag}
     </div>`;
   }).join('');
 
-  // Tier List
+  // Tier List with show more
+  renderTierList(allResults, isMulti);
+
+  // Chart
+  renderChart(runs);
+}
+
+function renderTierList(allResults, isMulti) {
+  const VISIBLE_COUNT = 10;
   const tierList = document.getElementById('tierList');
-  tierList.innerHTML = results.map((r, i) => {
+  const tierOverflow = document.getElementById('tierListOverflow');
+  const showMoreBtn = document.getElementById('tierShowMore');
+  const wrapper = document.getElementById('tierListWrapper');
+
+  wrapper.classList.add('collapsed');
+
+  const buildTierItem = (r, i, isFade) => {
     const pct = (r.average_similarity * 100).toFixed(1);
     const tier = getTier(r.average_similarity);
+
+    const runLabelHtml = isMulti
+      ? `<span class="tier-run-label" style="color:${RUN_COLORS[r.runIndex % RUN_COLORS.length].line}; border-color:${RUN_COLORS[r.runIndex % RUN_COLORS.length].line}30">${r.runLabel}</span>`
+      : '';
 
     const imagesHtml = r.per_image.map(([fullPath, filename, sim]) => {
       const simPct = (sim * 100).toFixed(1);
@@ -1103,11 +1307,14 @@ function displayResults(data) {
       ? `<div style="width:100%; color:var(--neon-amber); font-size:0.8em; margin-top:8px;">No face detected: ${r.skipped.join(', ')}</div>`
       : '';
 
-    return `<div class="tier-item ${tier.cls}" onclick="this.classList.toggle('open')">
+    const fadeClass = isFade ? ' tier-fade-item' : '';
+
+    return `<div class="tier-item ${tier.cls}${fadeClass}" onclick="this.classList.toggle('open')">
       <div class="tier-banner">
         <span class="tier-letter">${tier.letter}</span>
         <span class="tier-info">
           <span class="tier-rank">#${i+1} &mdash; ${r.name}</span>
+          ${runLabelHtml}
           <span class="tier-pct">${pct}%</span>
           <span class="tier-meta">${r.sample_count} samples</span>
         </span>
@@ -1118,42 +1325,81 @@ function displayResults(data) {
         ${skippedHtml}
       </div>
     </div>`;
-  }).join('');
+  };
 
-  // Chart
-  const chronological = [...results].sort((a, b) => a.step - b.step);
+  if (allResults.length <= VISIBLE_COUNT) {
+    // Show all, no need for show more
+    tierList.innerHTML = allResults.map((r, i) => buildTierItem(r, i, false)).join('');
+    tierOverflow.innerHTML = '';
+    showMoreBtn.style.display = 'none';
+  } else {
+    // First 10 visible + 11th as faded preview (all in main list)
+    const visibleItems = allResults.slice(0, VISIBLE_COUNT);
+    const fadeItem = allResults[VISIBLE_COUNT];
+
+    tierList.innerHTML =
+      visibleItems.map((r, i) => buildTierItem(r, i, false)).join('') +
+      buildTierItem(fadeItem, VISIBLE_COUNT, true);
+
+    // Items 12+ go in overflow (hidden when collapsed)
+    const hiddenItems = allResults.slice(VISIBLE_COUNT + 1);
+    tierOverflow.innerHTML = hiddenItems.map((r, i) => buildTierItem(r, VISIBLE_COUNT + 1 + i, false)).join('');
+
+    const remaining = allResults.length - VISIBLE_COUNT;
+    document.getElementById('tierShowMoreText').textContent = `Show ${remaining} more`;
+    showMoreBtn.style.display = 'flex';
+  }
+}
+
+function toggleTierList() {
+  const wrapper = document.getElementById('tierListWrapper');
+  const isCollapsed = wrapper.classList.toggle('collapsed');
+  const fadeItem = document.querySelector('.tier-fade-item');
+  if (fadeItem) {
+    // When expanded, remove the fade so 11th item looks normal
+    if (!isCollapsed) fadeItem.classList.remove('tier-fade-item');
+    else fadeItem.classList.add('tier-fade-item');
+  }
+  const overflowCount = document.getElementById('tierListOverflow').children.length;
+  // +1 for the fade item that becomes visible
+  document.getElementById('tierShowMoreText').textContent = isCollapsed
+    ? `Show ${overflowCount + 1} more`
+    : 'Show less';
+}
+
+function renderChart(runs) {
   const ctx = document.getElementById('chart').getContext('2d');
-
   if (chartInstance) chartInstance.destroy();
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, 'rgba(244, 114, 182, 0.2)');
-  gradient.addColorStop(1, 'rgba(103, 232, 249, 0.02)');
+  const datasets = runs.map((run, idx) => {
+    const color = RUN_COLORS[idx % RUN_COLORS.length];
+    const chronological = [...run.results].sort((a, b) => a.step - b.step);
+
+    return {
+      label: run.label,
+      data: chronological.map(r => ({x: r.step, y: parseFloat((r.average_similarity * 100).toFixed(1))})),
+      borderColor: color.line,
+      backgroundColor: color.fill,
+      fill: runs.length === 1,  // Only fill area for single run
+      tension: 0.3,
+      pointRadius: chronological.length > 40 ? 0 : 3,
+      pointHoverRadius: 6,
+      pointBackgroundColor: color.line,
+      pointBorderColor: '#0a0a0f',
+      pointBorderWidth: 2,
+      borderWidth: 2,
+    };
+  });
 
   chartInstance = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels: chronological.map(r => r.step),
-      datasets: [{
-        label: 'Similarity (%)',
-        data: chronological.map(r => (r.average_similarity * 100).toFixed(1)),
-        borderColor: '#f472b6',
-        backgroundColor: gradient,
-        fill: true,
-        tension: 0.3,
-        pointRadius: chronological.length > 40 ? 0 : 3,
-        pointHoverRadius: 6,
-        pointBackgroundColor: '#f472b6',
-        pointBorderColor: '#0a0a0f',
-        pointBorderWidth: 2,
-        borderWidth: 2,
-      }]
-    },
+    data: { datasets },
     options: {
       responsive: true,
       interaction: { intersect: false, mode: 'index' },
       scales: {
         x: {
+          type: 'linear',
           title: { display: true, text: 'Training Step', color: '#6b6b80', font: { family: 'Inter' } },
           ticks: { color: '#6b6b80', maxTicksLimit: 20, font: { family: 'JetBrains Mono', size: 10 } },
           grid: { color: 'rgba(255,255,255,0.03)' }
@@ -1165,7 +1411,16 @@ function displayResults(data) {
         }
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: runs.length > 1,
+          labels: {
+            color: '#d4d4e0',
+            font: { family: 'JetBrains Mono', size: 11 },
+            usePointStyle: true,
+            pointStyle: 'line',
+            padding: 20,
+          }
+        },
         tooltip: {
           backgroundColor: '#111119',
           borderColor: '#1e1e2e',

@@ -56,6 +56,19 @@ class RunRequest(BaseModel):
     dataset_folder: str | None = None  # override auto-detected dataset
 
 
+class RunConfigEntry(BaseModel):
+    config_file: str
+    selected_steps: list[int]
+    dataset_folder: str | None = None
+    label: str | None = None
+
+
+class MultiRunRequest(BaseModel):
+    trainer: str
+    run_dir: str
+    runs: list[RunConfigEntry]
+
+
 # ── Progress state ──────────────────────────────────────────────────────────────
 
 _progress: dict = {"current": 0, "total": 0, "label": "", "phase": ""}
@@ -183,6 +196,97 @@ def _run_comparison(dataset_folder: str, steps_map: dict, selected_steps: list[i
         "ref_count": len(ref_embeddings),
         "ref_skipped": len(ref_skipped),
     }
+
+
+@app.post("/api/run-multi")
+async def run_multi_comparison(req: MultiRunRequest):
+    """Run comparison across multiple training runs."""
+    run_inputs = []
+    for entry in req.runs:
+        if req.trainer == "onetrainer":
+            steps_map = onetrainer.get_samples_for_run(req.run_dir, entry.config_file)
+            dataset_folder = entry.dataset_folder or onetrainer.get_dataset_path(req.run_dir, entry.config_file)
+        else:
+            raise HTTPException(400, "Trainer not yet supported")
+
+        if not dataset_folder or not Path(dataset_folder).is_dir():
+            raise HTTPException(400, f"Dataset folder not found: {dataset_folder}")
+        if not steps_map:
+            raise HTTPException(400, f"No sample images found for run: {entry.label or entry.config_file}")
+
+        run_inputs.append({
+            "label": entry.label or Path(entry.config_file).stem,
+            "dataset_folder": dataset_folder,
+            "steps_map": steps_map,
+            "selected_steps": entry.selected_steps,
+        })
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, _run_multi_comparison, run_inputs)
+    return result
+
+
+def _run_multi_comparison(run_inputs: list[dict]) -> dict:
+    global _progress
+    analyzer.initialize()
+
+    total_runs = len(run_inputs)
+    all_runs = []
+
+    # Cache dataset embeddings by folder path to avoid re-computing
+    dataset_cache: dict[str, tuple] = {}
+
+    for run_idx, run in enumerate(run_inputs):
+        dataset_folder = run["dataset_folder"]
+        label = run["label"]
+
+        # Extract or reuse reference embeddings
+        if dataset_folder not in dataset_cache:
+            _progress = {
+                "phase": "base",
+                "current": run_idx + 1,
+                "total": total_runs,
+                "label": f"Loading dataset for {label}...",
+            }
+            ref_embeddings, ref_skipped = analyzer.get_folder_embeddings(dataset_folder)
+            if not ref_embeddings:
+                raise HTTPException(400, f"No faces detected in dataset for {label}")
+            dataset_cache[dataset_folder] = (ref_embeddings, ref_skipped)
+        else:
+            ref_embeddings, ref_skipped = dataset_cache[dataset_folder]
+
+        selected_steps = run["selected_steps"]
+        steps_map = run["steps_map"]
+        results = []
+        total_steps = len(selected_steps)
+
+        for i, step_num in enumerate(selected_steps):
+            if step_num not in steps_map:
+                continue
+
+            _progress = {
+                "phase": "compare",
+                "current_run": run_idx + 1,
+                "total_runs": total_runs,
+                "run_label": label,
+                "current": i + 1,
+                "total": total_steps,
+                "label": f"[{label}] Step {step_num}",
+            }
+
+            image_paths = steps_map[step_num]
+            result = analyzer.compare_images_to_reference(ref_embeddings, image_paths)
+            results.append({"step": step_num, "name": f"Step {step_num}", **result})
+
+        results.sort(key=lambda r: r["average_similarity"], reverse=True)
+        all_runs.append({
+            "label": label,
+            "results": results,
+            "ref_count": len(ref_embeddings),
+            "ref_skipped": len(ref_skipped),
+        })
+
+    return {"runs": all_runs}
 
 
 @app.get("/api/progress")
