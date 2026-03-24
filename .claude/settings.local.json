@@ -10,7 +10,10 @@
       "Bash(venv/Scripts/python.exe -m pip uninstall streamlit -y)",
       "Bash(python -c \":*)",
       "Bash(venv/Scripts/python.exe -c \":*)",
-      "Bash(rtk git:*)"
+      "Bash(rtk git:*)",
+      "Bash(find \"c:\\\\Users\\\\linkh\\\\Desktop\\\\Neuer Ordner \\(2\\)\\\\LoRA-Training-Evaluator\" -type f -name \"*.py\" -o -name \"*.html\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.txt\" -o -name \"*.json\" -o -name \"*.yaml\" -o -name \"*.yml\" -o -name \"*.md\")",
+      "Bash(ls -la \"c:\\\\Users\\\\linkh\\\\Desktop\\\\Neuer Ordner \\(2\\)\\\\LoRA-Training-Evaluator\")",
+      "Bash(ls -la \"c:\\\\Users\\\\linkh\\\\Desktop\\\\Neuer Ordner \\(2\\)\\\\LoRA-Training-Evaluator\\\\static\")"
     ]
   }
 }
