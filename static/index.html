@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoRA Training Evaluator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --bg-card: #111119;
+    --bg-input: #16161f;
+    --bg-hover: #1c1c28;
+    --text: #d4d4e0;
+    --text-dim: #6b6b80;
+    --text-bright: #f0f0ff;
+
+    --neon-pink: #f472b6;
+    --neon-pink-dim: rgba(244, 114, 182, 0.15);
+    --neon-pink-glow: rgba(244, 114, 182, 0.3);
+    --neon-cyan: #67e8f9;
+    --neon-cyan-dim: rgba(103, 232, 249, 0.12);
+    --neon-cyan-glow: rgba(103, 232, 249, 0.25);
+    --neon-purple: #c084fc;
+    --neon-purple-dim: rgba(192, 132, 252, 0.12);
+    --neon-green: #86efac;
+    --neon-green-dim: rgba(134, 239, 172, 0.12);
+    --neon-amber: #fcd34d;
+    --neon-amber-dim: rgba(252, 211, 77, 0.12);
+    --neon-orange: #fb923c;
+    --neon-orange-dim: rgba(251, 146, 60, 0.12);
+    --neon-blue: #93c5fd;
+    --neon-blue-dim: rgba(147, 197, 253, 0.12);
+
+    --border: #1e1e2e;
+    --border-glow: rgba(244, 114, 182, 0.2);
+
+    --tier-s: var(--neon-pink);
+    --tier-s-bg: var(--neon-pink-dim);
+    --tier-a: var(--neon-orange);
+    --tier-a-bg: var(--neon-orange-dim);
+    --tier-b: var(--neon-amber);
+    --tier-b-bg: var(--neon-amber-dim);
+    --tier-c: var(--neon-green);
+    --tier-c-bg: var(--neon-green-dim);
+    --tier-d: var(--neon-blue);
+    --tier-d-bg: var(--neon-blue-dim);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-pink), var(--neon-cyan), transparent);
+    opacity: 0.4;
+  }
+
+  header h1 {
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--neon-pink), var(--neon-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header span {
+    color: var(--text-dim);
+    font-size: 0.85em;
+    font-weight: 300;
+    letter-spacing: 0.03em;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .sidebar h2 {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--neon-pink);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 0.78em; color: var(--text-dim); font-weight: 400; }
+
+  input[type="text"], input[type="number"], select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    outline: none;
+    transition: all 0.25s ease;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b80' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  select option {
+    background: var(--bg-input);
+    color: var(--text);
+  }
+
+  input:focus, select:focus {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 0 3px var(--neon-pink-dim), 0 0 20px var(--neon-pink-dim);
+  }
+
+  button {
+    background: transparent;
+    color: var(--neon-pink);
+    border: 1px solid var(--neon-pink);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.85em;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  button:hover {
+    background: var(--neon-pink-dim);
+    box-shadow: 0 0 20px var(--neon-pink-dim);
+  }
+
+  button:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .btn-browse {
+    padding: 10px 14px;
+    font-size: 0.78em;
+    white-space: nowrap;
+  }
+
+  .folder-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+  }
+
+  .folder-row input { flex: 1; min-width: 0; }
+
+  .info-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.8em;
+    line-height: 1.7;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .info-box strong { color: var(--neon-cyan); }
+
+  /* Step selection */
+  .step-select-mode { display: flex; gap: 4px; }
+  .step-select-mode button {
+    flex: 1;
+    padding: 7px 8px;
+    font-size: 0.78em;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+  }
+  .step-select-mode button.active {
+    background: var(--neon-pink-dim);
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+    box-shadow: 0 0 12px var(--neon-pink-dim);
+  }
+
+  .range-inputs { display: flex; gap: 8px; align-items: center; }
+  .range-inputs input { width: 100%; }
+  .range-inputs span { color: var(--text-dim); white-space: nowrap; font-size: 0.85em; }
+
+  /* Wizard step indicators */
+  .wizard-step {
+    transition: opacity 0.3s ease;
+  }
+
+  .wizard-step.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--neon-pink-dim);
+    color: var(--neon-pink);
+    font-size: 0.65em;
+    font-weight: 700;
+    margin-right: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .step-number.done {
+    background: var(--neon-green-dim);
+    color: var(--neon-green);
+  }
+
+  /* Config cards */
+  .config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .config-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.78em;
+  }
+
+  .config-card:hover {
+    border-color: var(--neon-pink);
+    background: var(--bg-hover);
+  }
+
+  .config-card.selected {
+    border-color: var(--neon-pink);
+    background: var(--neon-pink-dim);
+    box-shadow: 0 0 12px var(--neon-pink-dim);
+  }
+
+  .config-card .config-name {
+    font-weight: 600;
+    color: var(--text-bright);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .config-card .config-meta {
+    color: var(--text-dim);
+    font-size: 0.9em;
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+
+  .config-card .config-meta .has-samples { color: var(--neon-green); }
+  .config-card .config-meta .no-samples { color: var(--text-dim); opacity: 0.5; }
+
+  #runBtn {
+    padding: 14px;
+    font-size: 0.95em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #runBtn:not(:disabled):hover {
+    background: var(--neon-cyan-dim);
+    box-shadow: 0 0 30px var(--neon-cyan-dim), inset 0 0 30px var(--neon-cyan-dim);
+  }
+
+  .dataset-info {
+    font-size: 0.75em;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+
+  .dataset-info strong { color: var(--neon-cyan); font-weight: 600; }
+
+  /* ── Main Content ── */
+  .main {
+    padding: 36px;
+    overflow-y: auto;
+  }
+
+  .main h2 {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 18px;
+    color: var(--text-bright);
+    letter-spacing: -0.01em;
+  }
+
+  /* Instructions */
+  .instructions {
+    max-width: 580px;
+    line-height: 1.9;
+    color: var(--text-dim);
+    font-size: 0.9em;
+  }
+  .instructions h2 {
+    background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.4em;
+    margin-bottom: 20px;
+  }
+  .instructions ol { padding-left: 20px; }
+  .instructions li { margin: 10px 0; }
+  .instructions li strong { color: var(--text); }
+  .instructions code {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    color: var(--neon-cyan);
+  }
+  .instructions p { margin-top: 20px; font-size: 0.8em; color: var(--text-dim); opacity: 0.6; }
+
+  /* Progress */
+  .progress-container { max-width: 600px; }
+
+  .progress-bar-wrap {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    height: 32px;
+    overflow: hidden;
+    margin: 10px 0;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-pink), var(--neon-purple), var(--neon-cyan));
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 0.78em;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #000;
+    box-shadow: 0 0 20px var(--neon-pink-dim);
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .progress-label {
+    font-size: 0.85em;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Tier List ── */
+  .tier-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 40px; }
+
+  .tier-item {
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tier-item:hover { transform: translateX(3px); }
+
+  .tier-banner {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 500;
+    user-select: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    border-radius: 8px;
+  }
+
+  .tier-item:hover .tier-banner { border-color: rgba(255,255,255,0.05); }
+
+  .tier-banner .tier-letter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.3em;
+    font-weight: 800;
+    min-width: 32px;
+    text-align: center;
+    text-shadow: 0 0 20px currentColor;
+  }
+
+  .tier-banner .tier-info { flex: 1; display: flex; align-items: center; gap: 12px; }
+  .tier-banner .tier-rank { font-weight: 600; font-size: 0.88em; }
+  .tier-banner .tier-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95em;
+    font-weight: 700;
+  }
+  .tier-banner .tier-meta { font-size: 0.78em; opacity: 0.5; }
+  .tier-banner .tier-arrow {
+    font-size: 0.9em;
+    transition: transform 0.25s ease;
+    opacity: 0.5;
+  }
+
+  .tier-item.open .tier-arrow { transform: rotate(90deg); opacity: 1; }
+
+  .tier-images {
+    display: none;
+    background: var(--bg-card);
+    padding: 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin-top: -4px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tier-item.open .tier-images { display: flex; }
+
+  .tier-image-card {
+    width: calc(25% - 8px);
+    text-align: center;
+  }
+
+  .tier-image-card img {
+    width: 100%;
+    border-radius: 6px;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    transition: all 0.25s ease;
+  }
+
+  .tier-image-card img:hover {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 20px var(--neon-pink-dim);
+    transform: scale(1.03);
+  }
+
+  .tier-image-card .img-sim {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75em;
+    margin-top: 6px;
+    font-weight: 600;
+    color: var(--neon-cyan);
+  }
+
+  .tier-image-card .img-name {
+    font-size: 0.65em;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.6;
+  }
+
+  /* Tier colors */
+  .tier-s .tier-banner {
+    background: var(--tier-s-bg);
+    color: var(--tier-s);
+    border-left: 3px solid var(--tier-s);
+    box-shadow: inset 0 0 30px rgba(244,114,182,0.05);
+  }
+  .tier-a .tier-banner {
+    background: var(--tier-a-bg);
+    color: var(--tier-a);
+    border-left: 3px solid var(--tier-a);
+    box-shadow: inset 0 0 30px rgba(251,146,60,0.05);
+  }
+  .tier-b .tier-banner {
+    background: var(--tier-b-bg);
+    color: var(--tier-b);
+    border-left: 3px solid var(--tier-b);
+    box-shadow: inset 0 0 30px rgba(252,211,77,0.05);
+  }
+  .tier-c .tier-banner {
+    background: var(--tier-c-bg);
+    color: var(--tier-c);
+    border-left: 3px solid var(--tier-c);
+    box-shadow: inset 0 0 30px rgba(134,239,172,0.05);
+  }
+  .tier-d .tier-banner {
+    background: var(--tier-d-bg);
+    color: var(--tier-d);
+    border-left: 3px solid var(--tier-d);
+    box-shadow: inset 0 0 30px rgba(147,197,253,0.05);
+  }
+
+  /* ── Chart ── */
+  .chart-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 40px;
+  }
+
+  .chart-container canvas { width: 100% !important; }
+
+  /* ── Top 5 ── */
+  .top5 {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .top5-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .top5-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-pink), var(--neon-cyan));
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .top5-card:hover::before { opacity: 1; }
+  .top5-card:hover {
+    border-color: var(--border-glow);
+    box-shadow: 0 4px 30px rgba(244,114,182,0.08);
+    transform: translateY(-2px);
+  }
+
+  .top5-card:first-child { border-color: rgba(244,114,182,0.3); }
+  .top5-card:first-child::before { opacity: 1; }
+
+  .top5-card .rank { font-size: 0.75em; color: var(--text-dim); font-weight: 500; letter-spacing: 0.05em; }
+  .top5-card .step-name { font-size: 0.9em; font-weight: 600; margin: 6px 0; color: var(--text-bright); }
+  .top5-card .pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5em;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--neon-pink), var(--neon-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .lightbox.open { display: flex; }
+
+  .lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 60px rgba(244,114,182,0.15);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LoRA Training Evaluator</h1>
+  <span>Face Likeness Comparison</span>
+</header>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <!-- Step 1: Trainer Selection -->
+    <div class="wizard-step" id="step1">
+      <h2><span class="step-number" id="step1num">1</span> Trainer</h2>
+      <div class="form-group">
+        <select id="trainerSelect" onchange="onTrainerChange()">
+          <option value="">Select trainer...</option>
+        </select>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 2: Workspace -->
+    <div class="wizard-step disabled" id="step2">
+      <h2><span class="step-number" id="step2num">2</span> Workspace</h2>
+      <div class="form-group">
+        <label id="workspaceLabel">Select workspace folder</label>
+        <div class="folder-row">
+          <input type="text" id="workspacePath" placeholder="Click Browse..." spellcheck="false" readonly>
+          <button class="btn-browse" onclick="browseWorkspace()">Browse</button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 3: Training Run -->
+    <div class="wizard-step disabled" id="step3">
+      <h2><span class="step-number" id="step3num">3</span> Training Run</h2>
+      <div class="config-list" id="configList"></div>
+      <div id="configDetails" style="display:none; margin-top:8px;">
+        <div class="dataset-info" id="datasetInfo"></div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 4: Step Selection -->
+    <div class="wizard-step disabled" id="step4">
+      <h2><span class="step-number" id="step4num">4</span> Step Selection</h2>
+      <div class="info-box" id="stepsInfo" style="margin-bottom:8px"></div>
+      <div class="step-select-mode">
+        <button class="active" onclick="setSelectMode('all', this)">All</button>
+        <button onclick="setSelectMode('range', this)">Range</button>
+      </div>
+      <div id="rangeInputs" style="display:none; margin-top:8px">
+        <div class="range-inputs">
+          <input type="number" id="rangeMin" placeholder="From">
+          <span>to</span>
+          <input type="number" id="rangeMax" placeholder="To">
+        </div>
+      </div>
+      <div class="info-box" id="selectionInfo" style="margin-top:8px"></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Run -->
+    <button onclick="runComparison()" id="runBtn" disabled>
+      Run Comparison
+    </button>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main" id="mainContent">
+    <div class="instructions" id="instructions">
+      <h2>Getting Started</h2>
+      <ol>
+        <li><strong>Select your trainer</strong> &mdash; choose which training tool you used.</li>
+        <li><strong>Browse to your workspace</strong> &mdash; select the run/workspace folder.</li>
+        <li><strong>Pick a training run</strong> &mdash; the dataset is auto-detected from the config.</li>
+        <li><strong>Select steps</strong> &mdash; choose all or narrow to a range.</li>
+        <li><strong>Run</strong> &mdash; faces are detected, compared, and ranked by likeness.</li>
+      </ol>
+      <p>Powered by InsightFace (ArcFace) for face detection and recognition.</p>
+    </div>
+
+    <div id="progressSection" style="display:none">
+      <h2>Analyzing...</h2>
+      <div class="progress-container">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">Initializing...</div>
+      </div>
+    </div>
+
+    <div id="resultsSection" style="display:none">
+      <h2>Top Checkpoints</h2>
+      <div class="top5" id="top5"></div>
+
+      <h2>Tier List</h2>
+      <div class="tier-list" id="tierList"></div>
+
+      <h2>Similarity Over Training Steps</h2>
+      <div class="chart-container">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lightboxImg" src="">
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+<script>
+// ── State ──
+let selectedTrainer = '';
+let workspacePath = '';
+let configs = [];
+let selectedConfig = null;
+let scannedSteps = [];
+let selectMode = 'all';
+let chartInstance = null;
+
+// ── Init: load trainers ──
+(async function init() {
+  const res = await fetch('/api/trainers');
+  const data = await res.json();
+  const sel = document.getElementById('trainerSelect');
+  for (const [key, label] of Object.entries(data.trainers)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+})();
+
+// ── Wizard flow ──
+
+function setWizardStep(step) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById(`step${i}`);
+    const num = document.getElementById(`step${i}num`);
+    if (i <= step) {
+      el.classList.remove('disabled');
+    } else {
+      el.classList.add('disabled');
+    }
+    if (i < step) {
+      num.classList.add('done');
+      num.textContent = '\u2713';
+    } else {
+      num.classList.remove('done');
+      num.textContent = i;
+    }
+  }
+  updateRunBtn();
+}
+
+function onTrainerChange() {
+  selectedTrainer = document.getElementById('trainerSelect').value;
+  selectedConfig = null;
+  configs = [];
+  scannedSteps = [];
+  document.getElementById('workspacePath').value = '';
+  document.getElementById('configList').innerHTML = '';
+  document.getElementById('configDetails').style.display = 'none';
+
+  if (selectedTrainer) {
+    setWizardStep(2);
+    // Update label based on trainer
+    const labels = {
+      'onetrainer': 'Select the workspace\\run folder',
+      'ai-toolkit': 'Select the output folder',
+      'kohya_ss': 'Select the output folder',
+      'musubi_tuner': 'Select the output folder',
+    };
+    document.getElementById('workspaceLabel').textContent = labels[selectedTrainer] || 'Select workspace folder';
+  } else {
+    setWizardStep(1);
+  }
+}
+
+async function browseWorkspace() {
+  const labels = {
+    'onetrainer': 'Select OneTrainer workspace/run folder',
+    'ai-toolkit': 'Select AI Toolkit output folder',
+    'kohya_ss': 'Select Kohya SS output folder',
+    'musubi_tuner': 'Select MusubiTuner output folder',
+  };
+
+  const res = await fetch('/api/select-folder', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({title: labels[selectedTrainer] || 'Select Folder'})
+  });
+  const data = await res.json();
+  if (!data.path) return;
+
+  document.getElementById('workspacePath').value = data.path;
+  workspacePath = data.path;
+
+  // Validate
+  const valRes = await fetch('/api/validate-workspace', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({trainer: selectedTrainer, path: data.path})
+  });
+  const valData = await valRes.json();
+
+  if (!valData.valid) {
+    alert(valData.error || 'This does not look like a valid workspace folder for ' + selectedTrainer);
+    return;
+  }
+
+  // Load configs
+  await loadConfigs();
+}
+
+async function loadConfigs() {
+  const res = await fetch('/api/list-configs', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({trainer: selectedTrainer, run_dir: workspacePath})
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    alert(err.detail || 'Failed to load configs');
+    return;
+  }
+
+  const data = await res.json();
+  configs = data.configs;
+
+  const listEl = document.getElementById('configList');
+  listEl.innerHTML = configs.map((c, i) => {
+    const hasSamples = c.total_sample_images > 0;
+    const samplesLabel = hasSamples
+      ? `<span class="has-samples">${c.total_sample_images} samples (${c.steps.length} steps)</span>`
+      : `<span class="no-samples">no samples found</span>`;
+
+    return `<div class="config-card" onclick="selectConfig(${i})" id="config-${i}">
+      <div class="config-name">${c.output_name}</div>
+      <div class="config-meta">
+        ${c.start_time}<br>
+        ${samplesLabel}
+      </div>
+    </div>`;
+  }).join('');
+
+  setWizardStep(3);
+}
+
+function selectConfig(index) {
+  // Deselect previous
+  document.querySelectorAll('.config-card').forEach(c => c.classList.remove('selected'));
+
+  const cfg = configs[index];
+  selectedConfig = cfg;
+  document.getElementById(`config-${index}`).classList.add('selected');
+
+  // Show dataset info
+  const detailsEl = document.getElementById('configDetails');
+  detailsEl.style.display = 'block';
+
+  const datasetDisplay = cfg.dataset_path
+    ? `<strong>Dataset:</strong> ${cfg.dataset_path}`
+    : '<span style="color:var(--neon-orange)">No dataset path found in config</span>';
+
+  document.getElementById('datasetInfo').innerHTML =
+    `${datasetDisplay}<br><strong>Model:</strong> ${cfg.base_model}`;
+
+  if (cfg.steps.length === 0) {
+    setWizardStep(3);
+    document.getElementById('runBtn').disabled = true;
+    return;
+  }
+
+  // Populate step selection
+  scannedSteps = cfg.steps;
+
+  document.getElementById('stepsInfo').innerHTML =
+    `<strong>${cfg.steps.length}</strong> steps: ${cfg.steps[0]} &rarr; ${cfg.steps[cfg.steps.length - 1]}`;
+
+  document.getElementById('rangeMin').value = cfg.steps[0];
+  document.getElementById('rangeMin').min = cfg.steps[0];
+  document.getElementById('rangeMin').max = cfg.steps[cfg.steps.length - 1];
+  document.getElementById('rangeMax').value = cfg.steps[cfg.steps.length - 1];
+  document.getElementById('rangeMax').min = cfg.steps[0];
+  document.getElementById('rangeMax').max = cfg.steps[cfg.steps.length - 1];
+
+  updateSelectionInfo();
+  setWizardStep(4);
+}
+
+// ── Step Selection ──
+function setSelectMode(mode, btn) {
+  selectMode = mode;
+  document.querySelectorAll('.step-select-mode button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('rangeInputs').style.display = mode === 'range' ? 'block' : 'none';
+  updateSelectionInfo();
+}
+
+document.getElementById('rangeMin').addEventListener('input', updateSelectionInfo);
+document.getElementById('rangeMax').addEventListener('input', updateSelectionInfo);
+
+function getSelectedSteps() {
+  if (selectMode === 'all') return scannedSteps;
+  const min = parseInt(document.getElementById('rangeMin').value) || 0;
+  const max = parseInt(document.getElementById('rangeMax').value) || Infinity;
+  return scannedSteps.filter(s => s >= min && s <= max);
+}
+
+function updateSelectionInfo() {
+  const selected = getSelectedSteps();
+  document.getElementById('selectionInfo').textContent = `${selected.length} steps selected`;
+  updateRunBtn();
+}
+
+function updateRunBtn() {
+  const ready = selectedTrainer && workspacePath && selectedConfig
+    && selectedConfig.steps.length > 0 && getSelectedSteps().length > 0;
+  document.getElementById('runBtn').disabled = !ready;
+}
+
+// ── Run Comparison ──
+async function runComparison() {
+  const runBtn = document.getElementById('runBtn');
+  runBtn.disabled = true;
+
+  document.getElementById('instructions').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('progressSection').style.display = 'block';
+
+  const progressBar = document.getElementById('progressBar');
+  const progressLabel = document.getElementById('progressLabel');
+  progressBar.style.width = '0%';
+
+  const pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch('/api/progress');
+      const p = await res.json();
+      if (p.phase === 'base') {
+        progressBar.style.width = '5%';
+        progressLabel.textContent = 'Extracting reference faces...';
+      } else if (p.phase === 'compare' && p.total > 0) {
+        const pct = Math.round((p.current / p.total) * 100);
+        progressBar.style.width = pct + '%';
+        progressLabel.textContent = `Analyzing ${p.label} (${p.current}/${p.total})`;
+      }
+    } catch {}
+  }, 500);
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        trainer: selectedTrainer,
+        run_dir: workspacePath,
+        config_file: selectedConfig.config_file,
+        selected_steps: getSelectedSteps(),
+        dataset_folder: selectedConfig.dataset_path || null,
+      })
+    });
+
+    clearInterval(pollInterval);
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.detail || 'Comparison failed');
+      document.getElementById('progressSection').style.display = 'none';
+      document.getElementById('instructions').style.display = 'block';
+      runBtn.disabled = false;
+      return;
+    }
+
+    const data = await res.json();
+    displayResults(data);
+
+  } catch (e) {
+    clearInterval(pollInterval);
+    alert('Error: ' + e.message);
+    document.getElementById('progressSection').style.display = 'none';
+    document.getElementById('instructions').style.display = 'block';
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+// ── Display Results ──
+function getTier(sim) {
+  if (sim >= 0.85) return {letter: 'S', cls: 'tier-s'};
+  if (sim >= 0.75) return {letter: 'A', cls: 'tier-a'};
+  if (sim >= 0.65) return {letter: 'B', cls: 'tier-b'};
+  if (sim >= 0.55) return {letter: 'C', cls: 'tier-c'};
+  return {letter: 'D', cls: 'tier-d'};
+}
+
+function displayResults(data) {
+  document.getElementById('progressSection').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'block';
+
+  const results = data.results;
+
+  // Top 5
+  const top5El = document.getElementById('top5');
+  const top5 = results.slice(0, 5);
+  top5El.innerHTML = top5.map((r, i) => {
+    const pct = (r.average_similarity * 100).toFixed(1);
+    return `<div class="top5-card">
+      <div class="rank">#${i+1}</div>
+      <div class="step-name">${r.name}</div>
+      <div class="pct">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // Tier List
+  const tierList = document.getElementById('tierList');
+  tierList.innerHTML = results.map((r, i) => {
+    const pct = (r.average_similarity * 100).toFixed(1);
+    const tier = getTier(r.average_similarity);
+
+    const imagesHtml = r.per_image.map(([fullPath, filename, sim]) => {
+      const simPct = (sim * 100).toFixed(1);
+      return `<div class="tier-image-card">
+        <img src="/api/image?path=${encodeURIComponent(fullPath)}" alt="${filename}"
+             loading="lazy" onclick="event.stopPropagation(); openLightbox(this.src)">
+        <div class="img-sim">${simPct}%</div>
+        <div class="img-name" title="${filename}">${filename}</div>
+      </div>`;
+    }).join('');
+
+    const skippedHtml = r.skipped.length
+      ? `<div style="width:100%; color:var(--neon-amber); font-size:0.8em; margin-top:8px;">No face detected: ${r.skipped.join(', ')}</div>`
+      : '';
+
+    return `<div class="tier-item ${tier.cls}" onclick="this.classList.toggle('open')">
+      <div class="tier-banner">
+        <span class="tier-letter">${tier.letter}</span>
+        <span class="tier-info">
+          <span class="tier-rank">#${i+1} &mdash; ${r.name}</span>
+          <span class="tier-pct">${pct}%</span>
+          <span class="tier-meta">${r.sample_count} samples</span>
+        </span>
+        <span class="tier-arrow">\u25B6</span>
+      </div>
+      <div class="tier-images">
+        ${imagesHtml}
+        ${skippedHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Chart
+  const chronological = [...results].sort((a, b) => a.step - b.step);
+  const ctx = document.getElementById('chart').getContext('2d');
+
+  if (chartInstance) chartInstance.destroy();
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(244, 114, 182, 0.2)');
+  gradient.addColorStop(1, 'rgba(103, 232, 249, 0.02)');
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chronological.map(r => r.step),
+      datasets: [{
+        label: 'Similarity (%)',
+        data: chronological.map(r => (r.average_similarity * 100).toFixed(1)),
+        borderColor: '#f472b6',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.3,
+        pointRadius: chronological.length > 40 ? 0 : 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#f472b6',
+        pointBorderColor: '#0a0a0f',
+        pointBorderWidth: 2,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { intersect: false, mode: 'index' },
+      scales: {
+        x: {
+          title: { display: true, text: 'Training Step', color: '#6b6b80', font: { family: 'Inter' } },
+          ticks: { color: '#6b6b80', maxTicksLimit: 20, font: { family: 'JetBrains Mono', size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.03)' }
+        },
+        y: {
+          title: { display: true, text: 'Similarity (%)', color: '#6b6b80', font: { family: 'Inter' } },
+          ticks: { color: '#6b6b80', font: { family: 'JetBrains Mono', size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.03)' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111119',
+          borderColor: '#1e1e2e',
+          borderWidth: 1,
+          titleColor: '#f0f0ff',
+          bodyColor: '#d4d4e0',
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'JetBrains Mono' },
+          padding: 12,
+          cornerRadius: 8,
+        }
+      }
+    }
+  });
+}
+
+// ── Lightbox ──
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+</script>
+
+</body>
+</html>

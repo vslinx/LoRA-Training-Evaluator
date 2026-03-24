@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip --version)",
+      "Bash(rtk ls:*)",
+      "Bash(venv/Scripts/python.exe -m pip uninstall onnxruntime -y)",
+      "Bash(venv/Scripts/python.exe -m pip install onnxruntime-gpu)",
+      "Bash(venv/Scripts/python.exe -m pip install nvidia-cudnn-cu12)",
+      "Bash(venv/Scripts/python.exe -m pip install fastapi uvicorn)",
+      "Bash(venv/Scripts/python.exe -m pip uninstall streamlit -y)",
+      "Bash(python -c \":*)",
+      "Bash(venv/Scripts/python.exe -c \":*)",
+      "Bash(rtk git:*)"
+    ]
+  }
+}

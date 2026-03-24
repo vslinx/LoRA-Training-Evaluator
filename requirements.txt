@@ -1,0 +1,7 @@
+fastapi>=0.110.0
+uvicorn>=0.27.0
+insightface>=0.7.3
+onnxruntime-gpu>=1.16.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
