@@ -100,7 +100,3 @@ Create a new file in `trainers/` (e.g., `trainers/kohya.py`) implementing:
 - `get_dataset_path(path, config)` — return the reference dataset path
 
 Then register it in `trainers/__init__.py` and add the routing in `app.py`.
-
-## License
-
-MIT
