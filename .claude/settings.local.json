@@ -14,7 +14,9 @@
       "Bash(find \"c:\\\\Users\\\\linkh\\\\Desktop\\\\Neuer Ordner \\(2\\)\\\\LoRA-Training-Evaluator\" -type f -name \"*.py\" -o -name \"*.html\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.txt\" -o -name \"*.json\" -o -name \"*.yaml\" -o -name \"*.yml\" -o -name \"*.md\")",
       "Bash(ls -la \"c:\\\\Users\\\\linkh\\\\Desktop\\\\Neuer Ordner \\(2\\)\\\\LoRA-Training-Evaluator\")",
       "Bash(ls -la \"c:\\\\Users\\\\linkh\\\\Desktop\\\\Neuer Ordner \\(2\\)\\\\LoRA-Training-Evaluator\\\\static\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''app.py: OK''\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''app.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''app.py: OK''\\); ast.parse\\(open\\(''trainers/aitoolkit.py''\\).read\\(\\)\\); print\\(''aitoolkit.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''trainers/aitoolkit.py''\\).read\\(\\)\\); print\\(''OK''\\)\")"
     ]
   }
 }

@@ -24,7 +24,7 @@ The tool extracts face embeddings from your training dataset (reference identity
 | Trainer | Status |
 |---------|--------|
 | OneTrainer | Fully supported |
-| AI Toolkit | Planned |
+| AI Toolkit | Fully supported |
 | Kohya SS | Planned |
 | MusubiTuner | Planned |
 
@@ -67,6 +67,14 @@ The tool will:
 - Rank all steps across all runs by average similarity
 - Display a combined tier list and a chart with one colored line per run
 
+## Usage (AI Toolkit)
+
+1. Select **AI Toolkit** from the trainer dropdown
+2. Click **Browse** and select the `output/` folder (e.g., `ai-toolkit/output`) — each subfolder is detected as a separate run
+3. Pick one or **multiple training runs** from the list — dataset paths and sample mappings are auto-detected from each run's `config.yaml`
+4. Choose which **steps** to compare (all or a specific range)
+5. Click **Run Comparison**
+
 ## How It Works
 
 1. **Face Detection** — InsightFace's RetinaFace detector finds faces in each image
@@ -84,6 +92,7 @@ LoRA Training Evaluator/
   trainers/
     __init__.py       — Trainer registry and shared data models
     onetrainer.py     — OneTrainer config parsing and sample mapping
+    aitoolkit.py      — AI Toolkit config parsing and sample mapping
   static/
     index.html        — Web UI (single-page app)
   requirements.txt

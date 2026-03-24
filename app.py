@@ -26,6 +26,7 @@ import uvicorn
 from face_analyzer import FaceAnalyzer
 from trainers import TRAINERS
 from trainers import onetrainer
+from trainers import aitoolkit
 
 app = FastAPI(title="LoRA Training Evaluator")
 analyzer = FaceAnalyzer()
@@ -103,20 +104,28 @@ def _open_folder_dialog(title: str) -> str:
     return folder or ""
 
 
+TRAINER_MODULES = {
+    "onetrainer": onetrainer,
+    "ai-toolkit": aitoolkit,
+}
+
+
 @app.post("/api/validate-workspace")
 async def validate_workspace(req: ValidateWorkspaceRequest):
-    if req.trainer == "onetrainer":
-        valid = onetrainer.validate_workspace(req.path)
+    mod = TRAINER_MODULES.get(req.trainer)
+    if mod:
+        valid = mod.validate_workspace(req.path)
         return {"valid": valid}
     return {"valid": False, "error": "Trainer not yet supported"}
 
 
 @app.post("/api/list-configs")
 async def list_configs(req: ListConfigsRequest):
-    if req.trainer != "onetrainer":
+    mod = TRAINER_MODULES.get(req.trainer)
+    if not mod:
         raise HTTPException(400, "Trainer not yet supported")
 
-    runs = onetrainer.list_configs(req.run_dir)
+    runs = mod.list_configs(req.run_dir)
     return {
         "configs": [
             {
@@ -137,11 +146,11 @@ async def list_configs(req: ListConfigsRequest):
 @app.post("/api/run")
 async def run_comparison(req: RunRequest):
     # Get samples from trainer
-    if req.trainer == "onetrainer":
-        steps_map = onetrainer.get_samples_for_run(req.run_dir, req.config_file)
-        dataset_folder = req.dataset_folder or onetrainer.get_dataset_path(req.run_dir, req.config_file)
-    else:
+    mod = TRAINER_MODULES.get(req.trainer)
+    if not mod:
         raise HTTPException(400, "Trainer not yet supported")
+    steps_map = mod.get_samples_for_run(req.run_dir, req.config_file)
+    dataset_folder = req.dataset_folder or mod.get_dataset_path(req.run_dir, req.config_file)
 
     if not dataset_folder or not Path(dataset_folder).is_dir():
         raise HTTPException(400, f"Dataset folder not found: {dataset_folder}")
@@ -201,13 +210,14 @@ def _run_comparison(dataset_folder: str, steps_map: dict, selected_steps: list[i
 @app.post("/api/run-multi")
 async def run_multi_comparison(req: MultiRunRequest):
     """Run comparison across multiple training runs."""
+    mod = TRAINER_MODULES.get(req.trainer)
+    if not mod:
+        raise HTTPException(400, "Trainer not yet supported")
+
     run_inputs = []
     for entry in req.runs:
-        if req.trainer == "onetrainer":
-            steps_map = onetrainer.get_samples_for_run(req.run_dir, entry.config_file)
-            dataset_folder = entry.dataset_folder or onetrainer.get_dataset_path(req.run_dir, entry.config_file)
-        else:
-            raise HTTPException(400, "Trainer not yet supported")
+        steps_map = mod.get_samples_for_run(req.run_dir, entry.config_file)
+        dataset_folder = entry.dataset_folder or mod.get_dataset_path(req.run_dir, entry.config_file)
 
         if not dataset_folder or not Path(dataset_folder).is_dir():
             raise HTTPException(400, f"Dataset folder not found: {dataset_folder}")
