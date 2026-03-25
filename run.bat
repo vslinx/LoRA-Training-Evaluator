@@ -13,6 +13,6 @@ if not exist "venv\Scripts\activate.bat" (
     call venv\Scripts\activate.bat
 )
 
-echo Starting LoRA Training Evaluator at http://127.0.0.1:8000
+echo Starting LoRA Training Evaluator at http://127.0.0.1:8384
 python app.py
 pause

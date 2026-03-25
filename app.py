@@ -17,6 +17,7 @@ for _pkg in ("cudnn", "cublas"):
     if _bin.exists() and str(_bin) not in os.environ.get("PATH", ""):
         os.environ["PATH"] = str(_bin) + os.pathsep + os.environ.get("PATH", "")
 
+import webbrowser
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -31,6 +32,11 @@ from trainers import aitoolkit
 from trainers import anima
 
 app = FastAPI(title="LoRA Training Evaluator")
+
+
+@app.on_event("startup")
+async def open_browser():
+    webbrowser.open("http://127.0.0.1:8384")
 analyzer = FaceAnalyzer()
 style_analyzer = StyleAnalyzer()
 
@@ -328,4 +334,4 @@ async def serve_image(path: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8384)

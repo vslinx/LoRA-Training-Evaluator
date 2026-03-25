@@ -51,7 +51,7 @@ Results are displayed as a ranked tier list with per-image breakdowns and a simi
    ```
    This automatically creates a virtual environment, installs PyTorch with CUDA support, installs remaining dependencies, and starts the server.
 
-3. **Open** http://127.0.0.1:8000 in your browser
+3. **Open** http://127.0.0.1:8384 in your browser
 
 ### GPU Acceleration
 
