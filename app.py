@@ -24,12 +24,15 @@ from pydantic import BaseModel
 import uvicorn
 
 from face_analyzer import FaceAnalyzer
+from style_analyzer import StyleAnalyzer
 from trainers import TRAINERS
 from trainers import onetrainer
 from trainers import aitoolkit
+from trainers import anima
 
 app = FastAPI(title="LoRA Training Evaluator")
 analyzer = FaceAnalyzer()
+style_analyzer = StyleAnalyzer()
 
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -68,6 +71,7 @@ class MultiRunRequest(BaseModel):
     trainer: str
     run_dir: str
     runs: list[RunConfigEntry]
+    comparison_mode: str = "likeness"
 
 
 # ── Progress state ──────────────────────────────────────────────────────────────
@@ -107,6 +111,7 @@ def _open_folder_dialog(title: str) -> str:
 TRAINER_MODULES = {
     "onetrainer": onetrainer,
     "ai-toolkit": aitoolkit,
+    "anima": anima,
 }
 
 
@@ -232,13 +237,23 @@ async def run_multi_comparison(req: MultiRunRequest):
         })
 
     loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, _run_multi_comparison, run_inputs)
+    result = await loop.run_in_executor(
+        None, _run_multi_comparison, run_inputs, req.comparison_mode
+    )
     return result
 
 
-def _run_multi_comparison(run_inputs: list[dict]) -> dict:
+def _run_multi_comparison(run_inputs: list[dict], comparison_mode: str = "likeness") -> dict:
     global _progress
-    analyzer.initialize()
+
+    if comparison_mode == "style":
+        style_analyzer.initialize()
+        active = style_analyzer
+        no_embed_msg = "Could not extract style from any image in dataset for"
+    else:
+        analyzer.initialize()
+        active = analyzer
+        no_embed_msg = "No faces detected in dataset for"
 
     total_runs = len(run_inputs)
     all_runs = []
@@ -258,9 +273,9 @@ def _run_multi_comparison(run_inputs: list[dict]) -> dict:
                 "total": total_runs,
                 "label": f"Loading dataset for {label}...",
             }
-            ref_embeddings, ref_skipped = analyzer.get_folder_embeddings(dataset_folder)
+            ref_embeddings, ref_skipped = active.get_folder_embeddings(dataset_folder)
             if not ref_embeddings:
-                raise HTTPException(400, f"No faces detected in dataset for {label}")
+                raise HTTPException(400, f"{no_embed_msg} {label}")
             dataset_cache[dataset_folder] = (ref_embeddings, ref_skipped)
         else:
             ref_embeddings, ref_skipped = dataset_cache[dataset_folder]
@@ -285,7 +300,7 @@ def _run_multi_comparison(run_inputs: list[dict]) -> dict:
             }
 
             image_paths = steps_map[step_num]
-            result = analyzer.compare_images_to_reference(ref_embeddings, image_paths)
+            result = active.compare_images_to_reference(ref_embeddings, image_paths)
             results.append({"step": step_num, "name": f"Step {step_num}", **result})
 
         results.sort(key=lambda r: r["average_similarity"], reverse=True)

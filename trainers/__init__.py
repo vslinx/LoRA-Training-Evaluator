@@ -26,6 +26,7 @@ class TrainingRun:
 TRAINERS = {
     "onetrainer": "OneTrainer",
     "ai-toolkit": "AI Toolkit",
+    "anima": "Anima Standalone Trainer (gazingstars123)",
     "kohya_ss": "Kohya SS",
     "musubi_tuner": "MusubiTuner",
 }

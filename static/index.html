@@ -767,7 +767,7 @@
 
 <header>
   <h1>LoRA Training Evaluator</h1>
-  <span>Face Likeness Comparison</span>
+  <span id="headerSubtitle">Face Likeness Comparison</span>
 </header>
 
 <div class="layout">
@@ -811,11 +811,25 @@
 
     <hr class="divider">
 
-    <!-- Step 4: Step Selection -->
+    <!-- Step 4: Comparison Mode -->
     <div class="wizard-step disabled" id="step4">
-      <h2><span class="step-number" id="step4num">4</span> Step Selection</h2>
+      <h2><span class="step-number" id="step4num">4</span> Comparison Mode</h2>
+      <div class="step-select-mode" id="modeButtons">
+        <button class="active" onclick="setComparisonMode('likeness', this)">Person's Likeness</button>
+        <button onclick="setComparisonMode('style', this)">Style Similarity</button>
+      </div>
+      <div class="info-box" id="modeDescription" style="margin-top:8px">
+        Compare face similarity using InsightFace (ArcFace).
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 5: Step Selection -->
+    <div class="wizard-step disabled" id="step5">
+      <h2><span class="step-number" id="step5num">5</span> Step Selection</h2>
       <div class="info-box" id="stepsInfo" style="margin-bottom:8px"></div>
-      <div class="step-select-mode">
+      <div class="step-select-mode" id="stepSelectButtons">
         <button class="active" onclick="setSelectMode('all', this)">All</button>
         <button onclick="setSelectMode('range', this)">Range</button>
       </div>
@@ -845,10 +859,11 @@
         <li><strong>Select your trainer</strong> &mdash; choose which training tool you used.</li>
         <li><strong>Browse to your workspace</strong> &mdash; select the run/workspace folder.</li>
         <li><strong>Pick a training run</strong> &mdash; the dataset is auto-detected from the config.</li>
+        <li><strong>Choose comparison mode</strong> &mdash; Person's Likeness or Style Similarity.</li>
         <li><strong>Select steps</strong> &mdash; choose all or narrow to a range.</li>
-        <li><strong>Run</strong> &mdash; faces are detected, compared, and ranked by likeness.</li>
+        <li><strong>Run</strong> &mdash; images are compared and ranked by similarity.</li>
       </ol>
-      <p>Powered by InsightFace (ArcFace) for face detection and recognition.</p>
+      <p>Powered by InsightFace (ArcFace) for face recognition and CSD for style comparison.</p>
     </div>
 
     <div id="progressSection" style="display:none">
@@ -898,6 +913,7 @@ let configs = [];
 let selectedConfigs = [];  // multi-select
 let scannedSteps = [];
 let selectMode = 'all';
+let comparisonMode = 'likeness';
 let chartInstance = null;
 
 const RUN_COLORS = [
@@ -926,7 +942,7 @@ const RUN_COLORS = [
 // ── Wizard flow ──
 
 function setWizardStep(step) {
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const el = document.getElementById(`step${i}`);
     const num = document.getElementById(`step${i}num`);
     if (i <= step) {
@@ -959,6 +975,7 @@ function onTrainerChange() {
     const labels = {
       'onetrainer': 'Select the workspace\\run folder',
       'ai-toolkit': 'Select the output folder',
+      'anima': 'Select the training-ui/jobs folder',
       'kohya_ss': 'Select the output folder',
       'musubi_tuner': 'Select the output folder',
     };
@@ -972,6 +989,7 @@ async function browseWorkspace() {
   const labels = {
     'onetrainer': 'Select OneTrainer workspace/run folder',
     'ai-toolkit': 'Select AI Toolkit output folder',
+    'anima': 'Select Anima training-ui/jobs folder',
     'kohya_ss': 'Select Kohya SS output folder',
     'musubi_tuner': 'Select MusubiTuner output folder',
   };
@@ -1104,13 +1122,26 @@ function toggleConfig(index) {
   document.getElementById('rangeMax').max = scannedSteps[scannedSteps.length - 1];
 
   updateSelectionInfo();
-  setWizardStep(4);
+  setWizardStep(5);
+}
+
+// ── Comparison Mode ──
+function setComparisonMode(mode, btn) {
+  comparisonMode = mode;
+  document.querySelectorAll('#modeButtons button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('modeDescription').textContent = mode === 'likeness'
+    ? 'Compare face similarity using InsightFace (ArcFace).'
+    : 'Compare style similarity using CSD (Contrastive Style Descriptors).';
+  document.getElementById('headerSubtitle').textContent = mode === 'likeness'
+    ? 'Face Likeness Comparison'
+    : 'Style Similarity Comparison';
 }
 
 // ── Step Selection ──
 function setSelectMode(mode, btn) {
   selectMode = mode;
-  document.querySelectorAll('.step-select-mode button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#stepSelectButtons button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('rangeInputs').style.display = mode === 'range' ? 'block' : 'none';
   updateSelectionInfo();
@@ -1199,6 +1230,7 @@ async function runComparison() {
           trainer: selectedTrainer,
           run_dir: workspacePath,
           runs: runs,
+          comparison_mode: comparisonMode,
         })
       });
 
@@ -1303,8 +1335,9 @@ function renderTierList(allResults, isMulti) {
       </div>`;
     }).join('');
 
+    const skippedLabel = comparisonMode === 'style' ? 'Could not process' : 'No face detected';
     const skippedHtml = r.skipped.length
-      ? `<div style="width:100%; color:var(--neon-amber); font-size:0.8em; margin-top:8px;">No face detected: ${r.skipped.join(', ')}</div>`
+      ? `<div style="width:100%; color:var(--neon-amber); font-size:0.8em; margin-top:8px;">${skippedLabel}: ${r.skipped.join(', ')}</div>`
       : '';
 
     const fadeClass = isFade ? ' tier-fade-item' : '';
