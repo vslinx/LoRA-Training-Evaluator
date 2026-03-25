@@ -571,9 +571,9 @@
     border-radius: 12px;
     padding: 28px;
     margin-bottom: 40px;
+    position: relative;
+    height: 400px;
   }
-
-  .chart-container canvas { width: 100% !important; }
 
   /* ── Top 5 ── */
   .top5 {
@@ -1406,8 +1406,14 @@ function toggleTierList() {
 }
 
 function renderChart(runs) {
-  const ctx = document.getElementById('chart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
+  const canvas = document.getElementById('chart');
+  // Remove stale inline dimensions so Chart.js recalculates from container
+  canvas.removeAttribute('width');
+  canvas.removeAttribute('height');
+  canvas.style.width = '';
+  canvas.style.height = '';
+  const ctx = canvas.getContext('2d');
 
   const datasets = runs.map((run, idx) => {
     const color = RUN_COLORS[idx % RUN_COLORS.length];
@@ -1434,6 +1440,7 @@ function renderChart(runs) {
     data: { datasets },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
       scales: {
         x: {
