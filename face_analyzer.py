@@ -2,6 +2,7 @@
 
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 # Add nvidia cuDNN/cuBLAS DLLs to PATH before importing onnxruntime/insightface
@@ -46,20 +47,33 @@ class FaceAnalyzer:
     def get_embeddings_for_paths(self, image_paths: list[Path], progress_callback=None):
         """Extract face embeddings from a list of image paths.
 
+        Uses threaded image preloading so disk I/O overlaps with GPU inference.
+
         Returns:
             list of (path, embedding) tuples and list of skipped paths.
         """
         embeddings = []
         skipped = []
 
-        for i, img_path in enumerate(image_paths):
+        # Preload all images on threads while GPU processes them
+        def _load(path):
+            return path, cv2.imread(str(path))
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            loaded = list(pool.map(_load, image_paths))
+
+        for i, (img_path, img) in enumerate(loaded):
             if progress_callback:
-                progress_callback(i, len(image_paths), img_path.name)
-            emb = self.get_face_embedding(str(img_path))
-            if emb is not None:
-                embeddings.append((img_path, emb))
-            else:
+                progress_callback(i, len(loaded), img_path.name)
+            if img is None:
                 skipped.append(img_path)
+                continue
+            faces = self.app.get(img)
+            if not faces:
+                skipped.append(img_path)
+                continue
+            largest = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+            embeddings.append((img_path, largest.embedding))
 
         return embeddings, skipped
 
