@@ -22,7 +22,7 @@ from trainers import TrainingRun
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 SAMPLE_RE = re.compile(r"training-sample-(\d+)-\d+-\d+\.\w+$")
-TIMESTAMP_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
+TIMESTAMP_RE = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
 
 def validate_workspace(run_dir: str) -> bool:
@@ -50,7 +50,7 @@ def list_configs(run_dir: str) -> list[TrainingRun]:
             continue
 
         # Parse start time from filename
-        ts_match = TIMESTAMP_RE.match(cfg_path.stem)
+        ts_match = TIMESTAMP_RE.search(cfg_path.stem)
         if ts_match:
             start_time = ts_match.group(1).replace("_", " ")
         else:
@@ -161,7 +161,7 @@ def get_dataset_path(run_dir: str, config_file: str) -> str:
 
 def _parse_config_timestamp(filename: str) -> datetime | None:
     """Parse datetime from config filename like '2026-03-23_03-19-07.json'."""
-    ts_match = TIMESTAMP_RE.match(filename)
+    ts_match = TIMESTAMP_RE.search(filename)
     if not ts_match:
         return None
     try:
@@ -172,7 +172,7 @@ def _parse_config_timestamp(filename: str) -> datetime | None:
 
 def _parse_file_timestamp(filename: str) -> datetime | None:
     """Parse datetime from sample filename like '2026-03-23_03-20-38-training-sample-...'."""
-    ts_match = TIMESTAMP_RE.match(filename)
+    ts_match = TIMESTAMP_RE.search(filename)
     if not ts_match:
         return None
     try:
