@@ -32,8 +32,8 @@ except ImportError:
 from trainers import TrainingRun
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
-# Match step (6 digits), sample index (2 digits), timestamp (14 digits), seed from end of filename
-SAMPLE_RE = re.compile(r"_(\d{6})_(\d{2})_\d{14}_\d+\.\w+$")
+# Match step/epoch (optional 'e' prefix + 6 digits), sample index (2 digits), timestamp (14 digits), seed
+SAMPLE_RE = re.compile(r"_e?(\d{6})_(\d{2})_\d{14}_\d+\.\w+$")
 
 
 def validate_workspace(run_dir: str) -> bool:
