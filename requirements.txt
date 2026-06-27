@@ -1,7 +1,13 @@
+# ── Core: the evaluator (face/style comparison) ──
+# torch / torchvision are installed separately with the right CUDA build (see run.bat).
 fastapi>=0.110.0
 uvicorn>=0.27.0
 insightface>=0.7.3
-onnxruntime-gpu>=1.16.0
+# Pinned to a CUDA-12 build: onnxruntime-gpu 1.27+ targets CUDA 13 (needs
+# cublasLt64_13.dll) and silently falls back to CPU on a CUDA-12 setup. 1.22.0
+# matches CUDA 12.x + cuDNN 9.x (what torch cu126 bundles). Do NOT also install
+# plain `onnxruntime` — it shares the namespace and disables the CUDA provider.
+onnxruntime-gpu==1.22.0
 nvidia-cudnn-cu12>=9.0.0
 nvidia-cublas-cu12>=12.0.0
 opencv-python>=4.8.0
@@ -9,3 +15,6 @@ numpy>=1.24.0
 Pillow>=10.0.0
 pyyaml>=6.0
 huggingface-hub>=0.20.0
+tomli>=2.0.0; python_version < "3.11"
+
+# Sample Generation is optional — see requirements-sampling.txt.

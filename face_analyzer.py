@@ -5,9 +5,13 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-# Add nvidia cuDNN/cuBLAS DLLs to PATH before importing onnxruntime/insightface
-for _pkg in ("cudnn", "cublas"):
-    _bin = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia" / _pkg / "bin"
+# Make the CUDA runtime DLLs discoverable before importing onnxruntime/insightface,
+# so onnxruntime-gpu's CUDAExecutionProvider can load (otherwise it silently falls
+# back to CPU). torch's lib dir bundles the full CUDA 12 set (cudart, cublas,
+# cublasLt, cuDNN, cufft, curand); the nvidia/* dirs are added too as a fallback.
+_site = Path(sys.prefix) / "Lib" / "site-packages"
+_dll_dirs = [_site / "torch" / "lib", _site / "nvidia" / "cudnn" / "bin", _site / "nvidia" / "cublas" / "bin"]
+for _bin in _dll_dirs:
     if _bin.exists() and str(_bin) not in os.environ.get("PATH", ""):
         os.environ["PATH"] = str(_bin) + os.pathsep + os.environ.get("PATH", "")
 

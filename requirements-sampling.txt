@@ -1,0 +1,14 @@
+# ── Optional: native Sample Generation (the "Sample Generation" tab) ──
+# Install on top of the core install:  pip install -r requirements-sampling.txt
+# (torch / torchvision come from the core setup via run.bat.)
+#
+# These versions are pinned to AI Toolkit's known-good combo. The released
+# diffusers (PyPI 0.38.0) + newest transformers (5.12) break SDXL single-file
+# loading (CLIPTextModel was refactored); transformers 5.5.3 keeps the CLIP
+# structure diffusers needs AND still ships Qwen3-VL (used by Krea2).
+transformers==5.5.3
+diffusers @ git+https://github.com/huggingface/diffusers.git@dc8d9032171c83741fd37ed2b12bc9d8274464f3
+peft>=0.18.0
+safetensors>=0.4.0
+einops>=0.7.0
+accelerate>=0.30.0
