@@ -298,6 +298,19 @@ def get_samples_output_dir(run_dir: str, config_file: str) -> Path:
     return Path(run_dir) / config_file / "output" / "sample"
 
 
+def sample_output_path(run_dir: str, config_file: str, step: int,
+                       prompt_idx: int, settings) -> Path:
+    """Path for a natively-generated sample, in Anima's read convention
+    (``{output_name}_{step:06d}_{idx:02d}_{timestamp:14}_{seed}.png``)."""
+    child = Path(run_dir) / config_file
+    out_dir = child / "output" / "sample"
+    config = _parse_toml(child / "config.toml")
+    output_name = config.get("training_arguments", {}).get("output_name", config_file)
+    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    seed = getattr(settings, "seed", 0)
+    return out_dir / f"{output_name}_{step:06d}_{prompt_idx:02d}_{ts}_{seed}.png"
+
+
 def get_dataset_path(run_dir: str, config_file: str) -> str:
     """Extract the dataset path from a run's dataset.toml."""
     dataset_toml = Path(run_dir) / config_file / "dataset.toml"

@@ -5,8 +5,11 @@ every saved LoRA checkpoint of the run and renders each prompt — merging the
 trained checkpoint (+ any extra LoRAs) in and out around each step — writing the
 images into the trainer's samples-folder layout.
 
-Image filenames follow AI Toolkit's pattern ``{ts}__{step:09d}_{idx}.png`` so the
-generated samples are themselves readable by the evaluator afterwards.
+Each trainer names and places generated samples in *its own* convention via an
+optional ``sample_output_path(run_dir, config_file, step, prompt_idx, settings)``
+hook, so the generated images are immediately readable by that trainer's
+evaluator. Trainers that don't define the hook fall back to AI Toolkit's flat
+``{ts}__{step:09d}_{idx}.png`` pattern.
 """
 
 from __future__ import annotations
@@ -84,9 +87,13 @@ def run_sample_generation(
                     report(phase="sampling", current=done, total=total,
                             label=f"step {step} · prompt {pidx + 1}/{len(prompts)}", step=step)
                     image = sampler.generate(pidx, settings)
-                    ts = time.strftime("%Y%m%d%H%M%S")
-                    fname = f"{ts}__{step:09d}_{pidx}.png"
-                    fpath = out_dir / fname
+                    if hasattr(trainer_module, "sample_output_path"):
+                        fpath = trainer_module.sample_output_path(
+                            run_dir, config_file, step, pidx, settings)
+                    else:
+                        ts = time.strftime("%Y%m%d%H%M%S")
+                        fpath = out_dir / f"{ts}__{step:09d}_{pidx}.png"
+                    fpath.parent.mkdir(parents=True, exist_ok=True)
                     image.save(fpath)
                     written.append(str(fpath))
                     done += 1

@@ -72,6 +72,42 @@ def _get_process_config(data: dict) -> dict:
     return {}
 
 
+def _config_name(data: dict) -> str:
+    return data.get("config", {}).get("name", "") or data.get("meta", {}).get("name", "")
+
+
+def _final_checkpoint(run_folder: Path, data: dict, numbered_steps) -> tuple[int, Path] | None:
+    """Resolve AI Toolkit's final checkpoint.
+
+    AI Toolkit saves intermediate checkpoints as ``{name}_{step:09d}.safetensors``
+    but the *final* save drops the step suffix (just ``{name}.safetensors``), so it
+    would otherwise be missed. Map it to the configured total step count
+    (``train.steps``) so it's included as the last step; if that's unknown, fall
+    back to one save interval past the highest numbered checkpoint.
+    """
+    name = _config_name(data)
+    if not name:
+        return None
+    final = run_folder / f"{name}.safetensors"
+    if not final.is_file():
+        return None
+    proc = _get_process_config(data)
+    try:
+        total = int(proc.get("train", {}).get("steps"))
+    except (TypeError, ValueError):
+        total = None
+    if total is None:
+        steps = list(numbered_steps)
+        try:
+            save_every = int(proc.get("save", {}).get("save_every"))
+        except (TypeError, ValueError):
+            save_every = 1
+        total = (max(steps) + save_every) if steps else None
+    if total is None:
+        return None
+    return total, final
+
+
 def list_configs(run_dir: str) -> list[TrainingRun]:
     """List all training runs found in the output folder.
 
@@ -179,6 +215,9 @@ def list_runs_for_sampling(run_dir: str) -> list[TrainingRun]:
             for f in child.glob("*.safetensors")
             if (m := CHECKPOINT_RE.search(f.name))
         })
+        final = _final_checkpoint(child, data, steps)
+        if final and final[0] not in steps:
+            steps = sorted(steps + [final[0]])
 
         try:
             mtime = (child / "config.yaml").stat().st_mtime
@@ -271,6 +310,7 @@ def inspect_for_sampling(run_dir: str, config_file: str) -> dict:
         "width": sample_cfg.get("width", info["sampler"]["width"]),
         "height": sample_cfg.get("height", info["sampler"]["height"]),
         "seed": sample_cfg.get("seed", info["sampler"]["seed"]),
+        "shift": sample_cfg.get("shift") or info["sampler"]["shift"],
     })
 
     return info
@@ -286,12 +326,24 @@ def get_checkpoints_for_run(run_dir: str, config_file: str) -> dict[int, Path]:
         m = CHECKPOINT_RE.search(f.name)
         if m:
             out[int(m.group(1))] = f
+    final = _final_checkpoint(run_folder, _parse_config(run_folder), out.keys())
+    if final and final[0] not in out:
+        out[final[0]] = final[1]
     return dict(sorted(out.items()))
 
 
 def get_samples_output_dir(run_dir: str, config_file: str) -> Path:
     """Folder where generated samples are written (the run's samples/ folder)."""
     return Path(run_dir) / config_file / "samples"
+
+
+def sample_output_path(run_dir: str, config_file: str, step: int,
+                       prompt_idx: int, settings) -> Path:
+    """Path for a natively-generated sample, in AI Toolkit's read convention
+    (``{timestamp}__{step:09d}_{prompt_idx}.png``, flat in the run's samples/)."""
+    out_dir = Path(run_dir) / config_file / "samples"
+    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    return out_dir / f"{ts}__{step:09d}_{prompt_idx}.png"
 
 
 def get_dataset_path(run_dir: str, config_file: str) -> str:

@@ -275,6 +275,23 @@ def get_samples_output_dir(run_dir: str, config_file: str) -> Path:
     return Path(run_dir) / "samples"
 
 
+def sample_output_path(run_dir: str, config_file: str, step: int,
+                       prompt_idx: int, settings) -> Path:
+    """Path for a natively-generated sample, in OneTrainer's read convention.
+
+    OneTrainer's evaluator only scans per-prompt subfolders of ``samples/`` and
+    matches ``...-training-sample-{step}-{epoch}-{idx}.ext``, attributing images
+    to a run by a ``YYYY-MM-DD_HH-MM-SS`` timestamp falling inside that run's
+    config window. We anchor the timestamp to this run's own config time so the
+    samples are attributed to it even if newer runs exist in the workspace.
+    """
+    samples_dir = Path(run_dir) / "samples"
+    cfg_dt = _parse_config_timestamp(config_file) or datetime.now()
+    ts = cfg_dt.strftime("%Y-%m-%d_%H-%M-%S")
+    sub = samples_dir / str(prompt_idx)
+    return sub / f"{ts}-training-sample-{step}-0-{prompt_idx}.png"
+
+
 def get_dataset_path(run_dir: str, config_file: str) -> str:
     """Extract the dataset path from a config file (last concept)."""
     cfg_path = Path(run_dir) / "config" / config_file
