@@ -5,10 +5,13 @@ running face comparison, and serving sample images.
 """
 
 import os
-# Reduce CUDA fragmentation for the large (12.8B) sampling models; must be set
-# before torch initializes CUDA.
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import sys
+# Reduce CUDA fragmentation for the large (12.8B) sampling models; must be set
+# before torch initializes CUDA. expandable_segments is Linux-only — setting it on
+# Windows just triggers a per-run "not supported on this platform" warning, so skip
+# it there.
+if sys.platform != "win32":
+    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import json
 import traceback
 import asyncio
@@ -75,6 +78,26 @@ def _save_sample_settings(data: dict) -> None:
     SAMPLE_SETTINGS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
+# Saved prompt gallery (gitignored) — reusable prompts the user can pull into
+# any run's sample generation instead of retyping them.
+PROMPT_GALLERY_FILE = CONFIG_DIR / "prompt_gallery.json"
+
+
+def _load_prompt_gallery() -> list:
+    if PROMPT_GALLERY_FILE.is_file():
+        try:
+            data = json.loads(PROMPT_GALLERY_FILE.read_text(encoding="utf-8"))
+            return data if isinstance(data, list) else data.get("prompts", [])
+        except (json.JSONDecodeError, OSError):
+            return []
+    return []
+
+
+def _save_prompt_gallery(prompts: list) -> None:
+    CONFIG_DIR.mkdir(exist_ok=True)
+    PROMPT_GALLERY_FILE.write_text(json.dumps(prompts, indent=2), encoding="utf-8")
+
+
 # ── Models ──────────────────────────────────────────────────────────────────────
 
 class SelectFolderRequest(BaseModel):
@@ -97,6 +120,9 @@ class SampleLora(BaseModel):
     path: str
     weight: float = 1.0
 
+class PromptGalleryRequest(BaseModel):
+    prompts: list[SamplePrompt] = []
+
 class SaveFamilySettingsRequest(BaseModel):
     family: str
     # All optional: only the fields actually provided are merged into the saved
@@ -118,6 +144,13 @@ class GenerateSamplesRequest(BaseModel):
     loras: list[SampleLora] = []
     sampler: dict = {}
     prompts: list[SamplePrompt] = []
+    mode: str = "new"  # "new" = (re)generate all; "continue" = skip existing samples
+
+class CheckExistingSamplesRequest(BaseModel):
+    trainer: str
+    run_dir: str
+    config_file: str
+    num_prompts: int = 1
 
 class DeleteSamplesRequest(BaseModel):
     files: list[str] = []
@@ -234,6 +267,20 @@ async def save_sample_settings(req: SaveFamilySettingsRequest):
     return {"saved": True, "family": req.family}
 
 
+@app.get("/api/prompt-gallery")
+async def get_prompt_gallery():
+    """Return the saved reusable prompts (positive/negative pairs)."""
+    return {"prompts": _load_prompt_gallery()}
+
+
+@app.post("/api/prompt-gallery")
+async def save_prompt_gallery(req: PromptGalleryRequest):
+    """Replace the saved prompt gallery with the provided list."""
+    prompts = [p.model_dump() for p in req.prompts]
+    _save_prompt_gallery(prompts)
+    return {"saved": True, "count": len(prompts)}
+
+
 TRAINER_MODULES = {
     "onetrainer": onetrainer,
     "ai-toolkit": aitoolkit,
@@ -312,6 +359,41 @@ async def inspect_sampling(req: InspectSamplingRequest):
     return mod.inspect_for_sampling(req.run_dir, req.config_file)
 
 
+@app.post("/api/check-existing-samples")
+async def check_existing_samples(req: CheckExistingSamplesRequest):
+    """Report how many of a run's target checkpoints already have generated
+    samples, so the UI can offer to resume an interrupted run instead of
+    regenerating everything."""
+    mod = TRAINER_MODULES.get(req.trainer)
+    if not mod or not hasattr(mod, "get_checkpoints_for_run"):
+        return {"supported": False, "existing_images": 0, "total_images": 0}
+
+    steps = sorted(mod.get_checkpoints_for_run(req.run_dir, req.config_file).keys())
+    n = max(1, req.num_prompts)
+    total_images = len(steps) * n
+
+    existing = {}
+    if hasattr(mod, "existing_samples"):
+        existing = mod.existing_samples(req.run_dir, req.config_file)
+
+    existing_images = 0
+    done_steps = 0
+    for step in steps:
+        present = sum(1 for pidx in range(n) if (step, pidx) in existing)
+        existing_images += present
+        if present >= n:
+            done_steps += 1
+
+    return {
+        "supported": hasattr(mod, "existing_samples"),
+        "existing_images": existing_images,
+        "total_images": total_images,
+        "done_steps": done_steps,
+        "total_steps": len(steps),
+        "remaining_images": max(0, total_images - existing_images),
+    }
+
+
 @app.post("/api/generate-samples")
 async def generate_samples(req: GenerateSamplesRequest):
     """Generate sample images natively across every saved LoRA checkpoint."""
@@ -336,7 +418,7 @@ async def generate_samples(req: GenerateSamplesRequest):
         name=s.get("name", ""), scheduler=s.get("scheduler", ""),
         steps=int(s.get("steps", 20)), cfg=float(s.get("cfg", 7.0)),
         width=int(s.get("width", 1024)), height=int(s.get("height", 1024)),
-        seed=int(s.get("seed", 42)),
+        seed=int(s.get("seed", 42)), shift=float(s.get("shift", 3.0)),
     )
     extra_loras = [(l.path, l.weight) for l in req.loras if l.path]
 
@@ -353,8 +435,8 @@ async def generate_samples(req: GenerateSamplesRequest):
             lambda: run_sample_generation(
                 trainer_module=mod, family=req.model, run_dir=req.run_dir,
                 config_file=req.config_file, model_files=files, settings=settings,
-                prompts=req.prompts, extra_loras=extra_loras, progress=_progress_cb,
-                should_stop=lambda: _sampling_cancel,
+                prompts=req.prompts, extra_loras=extra_loras, mode=req.mode,
+                progress=_progress_cb, should_stop=lambda: _sampling_cancel,
             ),
         )
     except ModuleNotFoundError as e:
@@ -407,9 +489,14 @@ async def delete_samples(req: DeleteSamplesRequest):
 
 
 @app.get("/api/sampler-options")
-async def sampler_options():
-    """Which sampler/scheduler dropdown values are actually functional (mapped to
-    a real diffusers scheduler). The UI greys out / strikes through the rest."""
+async def sampler_options(model: str = ""):
+    """Which sampler/scheduler values the selected model family actually supports.
+    The UI shows only these (hiding the rest). Falls back to the SDXL set when no
+    (or an unknown) model is given, for back-compat."""
+    from samplers import get_supported_options
+    opts = get_supported_options(model) if model else None
+    if opts is not None:
+        return opts
     from samplers.sdxl.sampler import SUPPORTED_SAMPLERS, SUPPORTED_SCHEDULERS
     return {"samplers": SUPPORTED_SAMPLERS, "schedulers": SUPPORTED_SCHEDULERS}
 

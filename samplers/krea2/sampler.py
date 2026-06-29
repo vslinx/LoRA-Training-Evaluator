@@ -322,6 +322,9 @@ class _ModelShim:
 
 class Krea2Sampler(Sampler):
     family = "krea2"
+    # Experimental: Krea2 sampling is a fixed flow-matching Euler loop.
+    SUPPORTED_SAMPLERS = ["euler"]
+    SUPPORTED_SCHEDULERS = ["normal"]
 
     def __init__(self):
         self.model = None

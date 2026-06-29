@@ -346,6 +346,22 @@ def sample_output_path(run_dir: str, config_file: str, step: int,
     return out_dir / f"{ts}__{step:09d}_{prompt_idx}.png"
 
 
+def existing_samples(run_dir: str, config_file: str) -> dict[tuple[int, int], list[Path]]:
+    """Map each already-present ``(step, prompt_idx)`` to its sample image(s),
+    so the orchestrator can resume an interrupted run."""
+    samples_dir = Path(run_dir) / config_file / "samples"
+    out: dict[tuple[int, int], list[Path]] = defaultdict(list)
+    if not samples_dir.is_dir():
+        return {}
+    for img in samples_dir.iterdir():
+        if img.suffix.lower() not in IMAGE_EXTENSIONS:
+            continue
+        m = SAMPLE_RE.match(img.name)
+        if m:
+            out[(int(m.group(1)), int(m.group(2)))].append(img)
+    return dict(out)
+
+
 def get_dataset_path(run_dir: str, config_file: str) -> str:
     """Extract the dataset path from a run's config."""
     run_folder = Path(run_dir) / config_file

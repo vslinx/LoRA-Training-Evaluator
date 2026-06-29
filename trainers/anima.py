@@ -311,6 +311,22 @@ def sample_output_path(run_dir: str, config_file: str, step: int,
     return out_dir / f"{output_name}_{step:06d}_{prompt_idx:02d}_{ts}_{seed}.png"
 
 
+def existing_samples(run_dir: str, config_file: str) -> dict[tuple[int, int], list[Path]]:
+    """Map each already-present ``(step, prompt_idx)`` to its sample image(s),
+    so the orchestrator can resume an interrupted run."""
+    sample_dir = Path(run_dir) / config_file / "output" / "sample"
+    out: dict[tuple[int, int], list[Path]] = defaultdict(list)
+    if not sample_dir.is_dir():
+        return {}
+    for img in sample_dir.iterdir():
+        if img.suffix.lower() not in IMAGE_EXTENSIONS:
+            continue
+        m = SAMPLE_RE.search(img.name)
+        if m:
+            out[(int(m.group(1)), int(m.group(2)))].append(img)
+    return dict(out)
+
+
 def get_dataset_path(run_dir: str, config_file: str) -> str:
     """Extract the dataset path from a run's dataset.toml."""
     dataset_toml = Path(run_dir) / config_file / "dataset.toml"

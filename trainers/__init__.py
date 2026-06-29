@@ -78,6 +78,7 @@ def empty_sampling_info() -> dict:
             "width": 1024,
             "height": 1024,
             "seed": 42,
+            "shift": 3.0,
         },
         "prompts": [],
         "negative_prompt": "",

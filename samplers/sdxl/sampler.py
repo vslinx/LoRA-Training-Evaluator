@@ -110,6 +110,8 @@ class _SdxlLoraHandle:
 
 class SdxlSampler(Sampler):
     family = "sdxl"
+    SUPPORTED_SAMPLERS = SUPPORTED_SAMPLERS
+    SUPPORTED_SCHEDULERS = SUPPORTED_SCHEDULERS
 
     def __init__(self):
         self.pipe = None

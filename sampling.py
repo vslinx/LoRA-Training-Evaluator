@@ -30,6 +30,7 @@ def run_sample_generation(
     extra_loras: list,      # list of (path, weight)
     device: str = "cuda",
     dtype: str = "bfloat16",
+    mode: str = "new",      # "new" = (re)generate everything; "continue" = skip existing
     progress: Callable[[dict], None] | None = None,
     should_stop: Callable[[], bool] | None = None,
 ) -> dict:
@@ -53,6 +54,16 @@ def run_sample_generation(
     out_dir: Path = trainer_module.get_samples_output_dir(run_dir, config_file)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Map of already-present (step, prompt_idx) -> existing image paths. Used to
+    # resume an interrupted run ("continue", skip them) or to replace cleanly
+    # ("new", delete the old image before writing the fresh one).
+    existing: dict = {}
+    if hasattr(trainer_module, "existing_samples"):
+        try:
+            existing = trainer_module.existing_samples(run_dir, config_file)
+        except Exception:
+            existing = {}
+
     steps = sorted(checkpoints)
     total = len(steps) * len(prompts)
     report(phase="loading", current=0, total=total, label="Loading model…")
@@ -66,6 +77,7 @@ def run_sample_generation(
 
     done = 0
     written: list[str] = []
+    skipped = 0
     skipped_lora_warned = False
     stopped = False
     try:
@@ -73,6 +85,14 @@ def run_sample_generation(
             if _stop():
                 stopped = True
                 break
+            # In continue-mode, skip the whole checkpoint (and its LoRA merge) if
+            # every prompt already has a sample.
+            if mode == "continue" and all((step, pidx) in existing for pidx in range(len(prompts))):
+                done += len(prompts)
+                skipped += len(prompts)
+                report(phase="sampling", current=done, total=total,
+                        label=f"step {step} · already generated, skipping", step=step)
+                continue
             specs = [(str(checkpoints[step]), 1.0)] + [(p, w) for p, w in extra_loras]
             handle = sampler.apply_loras(specs)
             if handle is not None and getattr(handle, "skipped", None) and not skipped_lora_warned:
@@ -84,6 +104,12 @@ def run_sample_generation(
                     if _stop():
                         stopped = True
                         break
+                    if mode == "continue" and (step, pidx) in existing:
+                        done += 1
+                        skipped += 1
+                        report(phase="sampling", current=done, total=total,
+                                label=f"step {step} · prompt {pidx + 1}/{len(prompts)} (skipped)", step=step)
+                        continue
                     report(phase="sampling", current=done, total=total,
                             label=f"step {step} · prompt {pidx + 1}/{len(prompts)}", step=step)
                     image = sampler.generate(pidx, settings)
@@ -94,6 +120,14 @@ def run_sample_generation(
                         ts = time.strftime("%Y%m%d%H%M%S")
                         fpath = out_dir / f"{ts}__{step:09d}_{pidx}.png"
                     fpath.parent.mkdir(parents=True, exist_ok=True)
+                    # Regenerating (mode "new"): remove any prior image(s) for this
+                    # (step, prompt) so we replace rather than accumulate duplicates.
+                    for old in existing.get((step, pidx), []):
+                        try:
+                            if Path(old) != fpath:
+                                Path(old).unlink()
+                        except OSError:
+                            pass
                     image.save(fpath)
                     written.append(str(fpath))
                     done += 1
@@ -109,7 +143,8 @@ def run_sample_generation(
            label="Stopped" if stopped else "Done")
     return {
         "status": "stopped" if stopped else "ok",
-        "generated": done,
+        "generated": len(written),
+        "skipped": skipped,
         "output_dir": str(out_dir),
         "steps": steps,
         "prompts": len(prompts),

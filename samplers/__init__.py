@@ -12,6 +12,8 @@ _SAMPLER_REGISTRY: dict[str, str] = {
     "pony": "samplers.sdxl.sampler:SdxlSampler",
     "illustrious": "samplers.sdxl.sampler:SdxlSampler",
     "noobai": "samplers.sdxl.sampler:SdxlSampler",
+    "zimage_base": "samplers.zimage.sampler:ZImageSampler",
+    "zimage_turbo": "samplers.zimage.sampler:ZImageSampler",
     "krea2": "samplers.krea2.sampler:Krea2Sampler",
 }
 
@@ -22,6 +24,28 @@ def supported_families() -> set[str]:
 
 def is_supported(family: str) -> bool:
     return family in _SAMPLER_REGISTRY
+
+
+def get_supported_options(family: str) -> dict | None:
+    """Return the sampler/scheduler names a family's backend actually supports,
+    as ``{"samplers": [...], "schedulers": [...]}``. Read from the Sampler class's
+    ``SUPPORTED_SAMPLERS`` / ``SUPPORTED_SCHEDULERS`` attributes without running any
+    heavy inference imports. Returns None if the family or its module is unavailable.
+    """
+    target = _SAMPLER_REGISTRY.get(family)
+    if target is None:
+        return None
+    module_path, class_name = target.split(":")
+    import importlib
+    try:
+        module = importlib.import_module(module_path)
+        cls = getattr(module, class_name)
+    except Exception:
+        return None
+    return {
+        "samplers": list(getattr(cls, "SUPPORTED_SAMPLERS", [])),
+        "schedulers": list(getattr(cls, "SUPPORTED_SCHEDULERS", [])),
+    }
 
 
 def get_sampler(family: str) -> Sampler:

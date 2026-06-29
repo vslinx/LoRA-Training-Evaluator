@@ -12,3 +12,5 @@ peft>=0.18.0
 safetensors>=0.4.0
 einops>=0.7.0
 accelerate>=0.30.0
+# Read + dequantize GGUF text encoders (single-file Z-Image with a .gguf Qwen3).
+gguf>=0.10.0

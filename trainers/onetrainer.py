@@ -22,6 +22,8 @@ from trainers import TrainingRun, detect_sdxl_variant, empty_sampling_info
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 SAMPLE_RE = re.compile(r"training-sample-(\d+)-\d+-\d+\.\w+$")
+# Like SAMPLE_RE but also captures the trailing prompt index (used for resume).
+SAMPLE_STEP_IDX_RE = re.compile(r"training-sample-(\d+)-\d+-(\d+)\.\w+$")
 TIMESTAMP_RE = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 # Saved LoRA checkpoints in save/ are named
 # "{ts}-save-{step}-{epoch}-{idx}.safetensors".
@@ -290,6 +292,32 @@ def sample_output_path(run_dir: str, config_file: str, step: int,
     ts = cfg_dt.strftime("%Y-%m-%d_%H-%M-%S")
     sub = samples_dir / str(prompt_idx)
     return sub / f"{ts}-training-sample-{step}-0-{prompt_idx}.png"
+
+
+def existing_samples(run_dir: str, config_file: str) -> dict[tuple[int, int], list[Path]]:
+    """Map each already-present ``(step, prompt_idx)`` to its sample image(s),
+    so the orchestrator can resume an interrupted run. Restricted to this run's
+    config timestamp window (same filtering as ``get_samples_for_run``)."""
+    config_dir = Path(run_dir) / "config"
+    samples_dir = Path(run_dir) / "samples"
+    cfg_dt = _parse_config_timestamp(config_file)
+    out: dict[tuple[int, int], list[Path]] = defaultdict(list)
+    if not cfg_dt or not samples_dir.is_dir():
+        return {}
+    next_dt = _find_next_config_time(config_dir, config_file)
+    for prompt_dir in samples_dir.iterdir():
+        if not prompt_dir.is_dir():
+            continue
+        for img in prompt_dir.iterdir():
+            if img.suffix.lower() not in IMAGE_EXTENSIONS:
+                continue
+            img_dt = _parse_file_timestamp(img.name)
+            if not img_dt or img_dt < cfg_dt or (next_dt and img_dt >= next_dt):
+                continue
+            m = SAMPLE_STEP_IDX_RE.search(img.name)
+            if m:
+                out[(int(m.group(1)), int(m.group(2)))].append(img)
+    return dict(out)
 
 
 def get_dataset_path(run_dir: str, config_file: str) -> str:

@@ -19,6 +19,7 @@ class SamplerSettings:
     width: int = 1024
     height: int = 1024
     seed: int = 42
+    shift: float = 3.0  # flow-matching shift (used by flow models like Z-Image)
 
 
 @dataclass

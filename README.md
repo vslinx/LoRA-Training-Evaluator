@@ -122,11 +122,15 @@ straight into the evaluator.
    config is inspected to recognize the base model
 3. Confirm the **model family**, set the **model / CLIP / VAE** files, **sampler
    settings**, and **prompts** (add as many as you like). Model files, LoRAs, and
-   (optionally) sampler settings are remembered per model family
+   (optionally) sampler settings are remembered per model family. Reusable prompts
+   can be saved to the **Prompt Gallery** and pulled into any run with one click
 4. Optionally add **LoRAs for sampling** (e.g. a turbo/DMD2 LoRA)
 5. Click **Generate Samples** — one image is rendered per checkpoint × prompt and
    written into the run's samples folder. A **Stop** button cancels mid-run (with
-   an option to delete the partial samples)
+   an option to delete the partial samples). If samples for this run already exist
+   (e.g. an earlier run was interrupted), you're asked whether to **Continue**
+   (skip what's already there and render only the missing images) or **Regenerate
+   all** (replace everything)
 6. Click **Evaluate →** to open the evaluator pre-filled with that run
 
 ### Supported models
@@ -134,13 +138,32 @@ straight into the evaluator.
 | Model family | Status |
 |--------------|--------|
 | SDXL / Pony / Illustrious / NoobAI | Supported (via diffusers) |
+| Z-Image (Base/Turbo) | Supported (via diffusers `ZImagePipeline`) |
 | Krea2 | Experimental / work-in-progress (loads & runs; output quality not yet validated) |
-| Anima · Z-Image (Base/Turbo) | Planned |
+| Anima | Planned |
 
 Notes:
 - SDXL loads all-in-one single-file checkpoints; CLIP/VAE are optional (baked in).
   Only sampler/scheduler combinations that map to a real diffusers scheduler are
   shown in the dropdowns. DMD2 few-step LoRAs need the **lcm** sampler.
+- Z-Image is a flow-matching model and loads two ways:
+  - **Single file** — point **Model** at a single `.safetensors` transformer
+    (ComfyUI `diffusion_model` format), **VAE** at a single `.safetensors` VAE,
+    and **CLIP** at a single `.safetensors` *or* `.gguf` Qwen3 text encoder. The
+    model config + tokenizer are bundled (`samplers/zimage/assets/`), so no
+    diffusers folder is needed. (Override the Qwen3 config/tokenizer with the
+    `ZIMAGE_TE_REPO` env var if you use a different Qwen3.)
+  - **Diffusers folder** — point **Model** at the base folder (with
+    `transformer/`, `text_encoder/`, `tokenizer/`, `vae/` subfolders); CLIP/VAE
+    are taken from the folder.
+  Set the **Shift** field (e.g. 6 for Z-Image Turbo); it's honored by `euler`
+  and `uni_pc` (`dpmpp_2m` uses diffusers' resolution-derived shift). The
+  **sampler** dropdown offers `euler` (FlowMatch Euler), `dpmpp_2m` (DPMSolver)
+  and `uni_pc` (UniPC); the **scheduler** dropdown is the sigma spacing
+  (`normal`/`beta`/`karras`). `beta`/`karras` only apply to `euler` — the
+  multistep solvers fall back to `normal` (other spacings blow up flow sigmas).
+- The sampler/scheduler dropdowns now list **only what the selected model family
+  supports** (served per-model by `/api/sampler-options?model=...`).
 - Generated samples are written with the trainer's filename convention, so they
   are immediately readable by the evaluator.
 - Per-family settings persist in `config/sample_settings.json` (gitignored).
@@ -179,6 +202,8 @@ LoRA Training Evaluator/
     base.py               — Sampler interface + settings dataclasses
     lora.py               — LoRA loading / merging (PEFT + kohya formats)
     sdxl/sampler.py       — SDXL/Pony/Illustrious/NoobAI sampler (diffusers)
+    zimage/               — Z-Image (Base/Turbo) sampler; single-file + folder
+                            loading, GGUF/safetensors Qwen3 TE, vendored configs
     krea2/                — Krea2 sampler (experimental; vendored arch, see NOTICE.md)
   static/
     index.html            — Web UI (single-page app)

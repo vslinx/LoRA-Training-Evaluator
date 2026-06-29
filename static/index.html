@@ -962,6 +962,66 @@
     background: var(--neon-cyan-dim);
   }
 
+  /* Prompt gallery */
+  .sg-gallery {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .sg-gallery-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .sg-gallery-title {
+    font-size: 0.78em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .sg-gallery-save {
+    padding: 5px 10px;
+    font-size: 0.8em;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .sg-gallery-save:hover {
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+  }
+  .sg-gallery-list { display: flex; flex-direction: column; gap: 6px; }
+  .sg-gallery-empty { font-size: 0.82em; color: var(--text-dim); font-style: italic; }
+  .sg-gallery-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .sg-gallery-snippet {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.84em;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .sg-gallery-add, .sg-gallery-del {
+    flex-shrink: 0;
+    padding: 4px 9px;
+    font-size: 0.82em;
+    line-height: 1;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .sg-gallery-add:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+  .sg-gallery-del:hover { border-color: var(--neon-pink); color: var(--neon-pink); }
+
   #sgDetectBox .sg-detect-ok { color: var(--neon-green); font-weight: 600; }
   #sgDetectBox .sg-detect-warn { color: var(--neon-amber); font-weight: 600; }
 
@@ -1363,6 +1423,10 @@
             <label>Seed</label>
             <input type="number" id="sgSeed" value="42">
           </div>
+          <div class="form-group">
+            <label>Shift <span class="sg-optional">(flow models, e.g. Z-Image)</span></label>
+            <input type="number" id="sgShift" min="0" step="0.1" value="3">
+          </div>
         </div>
       </div>
 
@@ -1383,6 +1447,16 @@
         </div>
         <div id="sgPromptList"></div>
         <button class="sg-add-prompt" onclick="sgAddPrompt()">+ Add Prompt</button>
+
+        <!-- Prompt gallery: reusable saved prompts -->
+        <div class="sg-gallery">
+          <div class="sg-gallery-head">
+            <span class="sg-gallery-title">Prompt Gallery</span>
+            <button class="sg-gallery-save" onclick="sgSaveCurrentPromptsToGallery()"
+              title="Save the current prompts to the gallery">+ Save current</button>
+          </div>
+          <div id="sgGalleryList" class="sg-gallery-list"></div>
+        </div>
       </div>
 
       <!-- Output -->
@@ -1422,6 +1496,20 @@
       <button id="sgSaveGenBtn" onclick="sgConfirmGenerate(true)">Save &amp; Generate</button>
       <button onclick="sgConfirmGenerate(false)">Generate without saving</button>
       <button class="sg-keep-btn" onclick="sgCloseSaveDialog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="sg-modal" id="sgResumeDialog">
+  <div class="sg-modal-box">
+    <div class="sg-modal-title">Samples already exist</div>
+    <div class="sg-modal-body" id="sgResumeBody">
+      Some samples for this run already exist.
+    </div>
+    <div class="sg-modal-actions">
+      <button id="sgResumeContinueBtn" onclick="sgResolveResume('continue')">Continue (skip existing)</button>
+      <button onclick="sgResolveResume('new')">Regenerate all</button>
+      <button class="sg-keep-btn" onclick="sgResolveResume(null)">Cancel</button>
     </div>
   </div>
 </div>
@@ -2064,22 +2152,9 @@ const SG_SCHEDULERS = [
     buildModelDropdown();
   } catch {}
 
-  // Which sampler/scheduler values are actually functional (map to a real
-  // diffusers scheduler). The rest are shown disabled + struck through.
-  let supSamplers = null, supSchedulers = null;
-  try {
-    const r = await fetch('/api/sampler-options'); const d = await r.json();
-    supSamplers = new Set(d.samplers); supSchedulers = new Set(d.schedulers);
-  } catch {}
-
-  // Only list samplers/schedulers we actually support (keep the original order).
-  // If the supported list couldn't be fetched, fall back to showing everything.
-  const addOptions = (sel, items, supported) => {
-    (supported ? items.filter(s => supported.has(s)) : items)
-      .forEach(s => sel.add(new Option(s, s)));
-  };
-  addOptions(document.getElementById('sgSampler'), SG_SAMPLERS, supSamplers);
-  addOptions(document.getElementById('sgScheduler'), SG_SCHEDULERS, supSchedulers);
+  // Populate the sampler/scheduler dropdowns with only what the (currently
+  // selected) model family supports.
+  await sgRebuildSamplerOptions();
 
   // Persisted per-family settings (model files + LoRAs)
   try {
@@ -2087,7 +2162,32 @@ const SG_SCHEDULERS = [
     const data = await res.json();
     sgSavedFamilies = data.families || {};
   } catch {}
+
+  // Saved prompt gallery
+  sgLoadPromptGallery();
 })();
+
+// Rebuild the sampler + scheduler dropdowns to list only what the selected model
+// family supports (per /api/sampler-options?model=...), preserving the original
+// order and the current selection if it's still available.
+async function sgRebuildSamplerOptions() {
+  const model = document.getElementById('sgModelSelect').value || '';
+  let sup = null;
+  try {
+    const r = await fetch('/api/sampler-options?model=' + encodeURIComponent(model));
+    const d = await r.json();
+    sup = {samplers: new Set(d.samplers), schedulers: new Set(d.schedulers)};
+  } catch {}
+  const rebuild = (sel, items, supported) => {
+    const prev = sel.value;
+    sel.innerHTML = '';
+    (supported ? items.filter(s => supported.has(s)) : items)
+      .forEach(s => sel.add(new Option(s, s)));
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  };
+  rebuild(document.getElementById('sgSampler'), SG_SAMPLERS, sup && sup.samplers);
+  rebuild(document.getElementById('sgScheduler'), SG_SCHEDULERS, sup && sup.schedulers);
+}
 
 // Select a dropdown value if the (case-insensitive) option exists; otherwise
 // fall back to a default. Returns true if a config value matched.
@@ -2270,13 +2370,15 @@ async function sgSelectConfig(index) {
   sgUpdateGenerateBtn();
 }
 
-function sgPopulateForm(info) {
+async function sgPopulateForm(info) {
   info = info || {};
 
   // Model recognition
   const modelKey = info.model || '';
   const sel = document.getElementById('sgModelSelect');
   sel.value = modelKey;
+  // Rebuild sampler/scheduler dropdowns for this family before selecting values.
+  await sgRebuildSamplerOptions();
   const detectBox = document.getElementById('sgDetectBox');
   if (modelKey && sgModels[modelKey]) {
     detectBox.innerHTML = `<span class="sg-detect-ok">✓ Recognized:</span> ${sgModels[modelKey].label}` +
@@ -2300,6 +2402,7 @@ function sgPopulateForm(info) {
   if (s.width != null) document.getElementById('sgWidth').value = s.width;
   if (s.height != null) document.getElementById('sgHeight').value = s.height;
   if (s.seed != null) document.getElementById('sgSeed').value = s.seed;
+  if (s.shift != null) document.getElementById('sgShift').value = s.shift;
 
   // Prompts
   document.getElementById('sgNegativePrompt').value = info.negative_prompt || '';
@@ -2333,13 +2436,21 @@ function sgUpdateOutputInfo() {
 function sgUpdateModelFileRequirements() {
   const model = document.getElementById('sgModelSelect').value;
   const isSdxl = SG_SDXL_FAMILY.includes(model);
+  const isZImage = model.startsWith('zimage');
   const clipOpt = document.getElementById('sgClipOptional');
   const vaeOpt = document.getElementById('sgVaeOptional');
-  // SDXL: CLIP/VAE baked into the checkpoint → optional. Others → required.
-  clipOpt.textContent = isSdxl ? '(optional)' : '(required)';
-  vaeOpt.textContent = isSdxl ? '(optional)' : '(required)';
-  clipOpt.classList.toggle('sg-required', !isSdxl);
-  vaeOpt.classList.toggle('sg-required', !isSdxl);
+  // SDXL: CLIP/VAE baked into the checkpoint → optional.
+  // Z-Image: optional with a diffusers folder (carries them), required with a
+  // single .safetensors transformer.
+  // Krea2 / others: always required.
+  let label;
+  if (isSdxl) label = '(optional)';
+  else if (isZImage) label = '(folder: optional · single file: required)';
+  else label = '(required)';
+  clipOpt.textContent = label;
+  vaeOpt.textContent = label;
+  clipOpt.classList.toggle('sg-required', !isSdxl && !isZImage);
+  vaeOpt.classList.toggle('sg-required', !isSdxl && !isZImage);
   sgUpdateGenerateBtn();
 }
 
@@ -2365,6 +2476,8 @@ function sgApplyFamilyFiles(family, info) {
 // When the user manually changes the family, load that family's saved files.
 function sgOnModelFamilyChange() {
   sgApplyFamilyFiles(document.getElementById('sgModelSelect').value, null);
+  // Different families support different samplers/schedulers — rebuild the lists.
+  sgRebuildSamplerOptions();
 }
 
 function sgSaveCurrentFamily() {
@@ -2469,6 +2582,7 @@ function sgAddPrompt(value = '') {
   list.appendChild(row);
   sgRenumberPrompts();
   sgUpdateOutputInfo();
+  sgUpdateGenerateBtn();
 }
 
 function sgRemovePrompt(id) {
@@ -2481,6 +2595,7 @@ function sgRemovePrompt(id) {
     sgRenumberPrompts();
     sgUpdateOutputInfo();
   }
+  sgUpdateGenerateBtn();
 }
 
 function sgRenumberPrompts() {
@@ -2499,13 +2614,106 @@ function sgGetPrompts() {
     .map(t => ({prompt: t, negative_prompt: neg}));
 }
 
+// ---- Prompt gallery: reusable saved prompts (persisted server-side) ----
+let sgPromptGallery = [];  // [{prompt, negative_prompt}]
+
+async function sgLoadPromptGallery() {
+  try {
+    const res = await fetch('/api/prompt-gallery');
+    const data = await res.json();
+    sgPromptGallery = (data.prompts || []).filter(p => p && p.prompt);
+  } catch (e) {
+    sgPromptGallery = [];
+  }
+  sgRenderPromptGallery();
+}
+
+async function sgPersistPromptGallery() {
+  await fetch('/api/prompt-gallery', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({prompts: sgPromptGallery}),
+  });
+}
+
+function sgRenderPromptGallery() {
+  const list = document.getElementById('sgGalleryList');
+  if (!sgPromptGallery.length) {
+    list.innerHTML = `<div class="sg-gallery-empty">No saved prompts yet — write some prompts, then "Save current".</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  sgPromptGallery.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'sg-gallery-row';
+    const snippet = document.createElement('div');
+    snippet.className = 'sg-gallery-snippet';
+    snippet.textContent = p.prompt;
+    snippet.title = p.prompt + '\n\n(click to add to prompts)';
+    snippet.onclick = () => sgAddGalleryToPrompts(i);
+    const add = document.createElement('button');
+    add.className = 'sg-gallery-add';
+    add.textContent = '+ Add';
+    add.title = 'Add this prompt to the list';
+    add.onclick = () => sgAddGalleryToPrompts(i);
+    const del = document.createElement('button');
+    del.className = 'sg-gallery-del';
+    del.textContent = '✕';
+    del.title = 'Remove from gallery';
+    del.onclick = () => sgRemoveFromGallery(i);
+    row.append(snippet, add, del);
+    list.appendChild(row);
+  });
+}
+
+function sgAddGalleryToPrompts(idx) {
+  const p = sgPromptGallery[idx];
+  if (p) sgAddPrompt(p.prompt);
+}
+
+async function sgRemoveFromGallery(idx) {
+  sgPromptGallery.splice(idx, 1);
+  sgRenderPromptGallery();
+  await sgPersistPromptGallery();
+}
+
+async function sgSaveCurrentPromptsToGallery() {
+  const current = sgGetPrompts();
+  if (!current.length) { alert('Write at least one prompt to save.'); return; }
+  const existing = new Set(sgPromptGallery.map(p => p.prompt));
+  let added = 0;
+  current.forEach(p => {
+    if (!existing.has(p.prompt)) {
+      sgPromptGallery.push({prompt: p.prompt, negative_prompt: ''});
+      existing.add(p.prompt);
+      added += 1;
+    }
+  });
+  sgRenderPromptGallery();
+  await sgPersistPromptGallery();
+}
+
 function sgUpdateGenerateBtn() {
   const model = document.getElementById('sgModelSelect').value;
   const isSdxl = SG_SDXL_FAMILY.includes(model);
-  const hasModelPath = !!document.getElementById('sgModelPath').value.trim();
-  // Non-SDXL architectures need CLIP + VAE explicitly.
-  const hasClipVae = isSdxl ||
-    (document.getElementById('sgClipPath').value.trim() && document.getElementById('sgVaePath').value.trim());
+  const isZImage = model.startsWith('zimage');
+  const modelPath = document.getElementById('sgModelPath').value.trim();
+  const hasModelPath = !!modelPath;
+  const hasClip = !!document.getElementById('sgClipPath').value.trim();
+  const hasVae = !!document.getElementById('sgVaePath').value.trim();
+
+  // CLIP/VAE requirements depend on the architecture and (for Z-Image) on whether
+  // a single .safetensors transformer or a diffusers folder was picked. SDXL bakes
+  // them in; a Z-Image folder carries them; a single-file Z-Image or Krea2 needs
+  // explicit CLIP + VAE files.
+  let hasClipVae;
+  if (isSdxl) {
+    hasClipVae = true;
+  } else if (isZImage) {
+    const singleFile = /\.safetensors$/i.test(modelPath);
+    hasClipVae = singleFile ? (hasClip && hasVae) : true;
+  } else {
+    hasClipVae = hasClip && hasVae;
+  }
 
   const ready = sgTrainer && sgWorkspace && sgSelectedConfig && model
     && hasModelPath && hasClipVae && sgGetPrompts().length > 0;
@@ -2563,6 +2771,7 @@ function sgGetSamplerSettings() {
     width: parseInt(document.getElementById('sgWidth').value) || 1024,
     height: parseInt(document.getElementById('sgHeight').value) || 1024,
     seed: parseInt(document.getElementById('sgSeed').value) || 42,
+    shift: parseFloat(document.getElementById('sgShift').value) || 3,
   };
 }
 
@@ -2579,6 +2788,46 @@ function sgSaveFamilySampler() {
 }
 
 let sgSamplerSaveChoice = null;  // session-remembered dialog choice (true/false/null)
+
+// Resolver for the resume dialog (set while the modal is open).
+let _sgResumeResolve = null;
+function sgResolveResume(choice) {
+  document.getElementById('sgResumeDialog').classList.remove('open');
+  const r = _sgResumeResolve; _sgResumeResolve = null;
+  if (r) r(choice);
+}
+
+// Ask the backend whether samples already exist for this run; if so, pop the
+// resume dialog. Resolves to 'new', 'continue', or null (cancel).
+async function sgResolveGenerationMode(numPrompts) {
+  let info;
+  try {
+    const res = await fetch('/api/check-existing-samples', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        trainer: sgTrainer,
+        run_dir: sgWorkspace,
+        config_file: sgSelectedConfig.config_file,
+        num_prompts: numPrompts,
+      }),
+    });
+    info = await res.json();
+  } catch {
+    return 'new';  // check failed — fall back to a normal full run
+  }
+  if (!info || !info.existing_images) return 'new';  // nothing to resume
+
+  document.getElementById('sgResumeBody').innerHTML =
+    `<strong>${info.existing_images}</strong> of <strong>${info.total_images}</strong> ` +
+    `sample image(s) already exist for this run ` +
+    `(${info.done_steps}/${info.total_steps} checkpoints complete).<br><br>` +
+    `<strong>Continue</strong> skips what's already there and renders only the ` +
+    `remaining <strong>${info.remaining_images}</strong> image(s). ` +
+    `<strong>Regenerate all</strong> re-renders everything, replacing the existing images.`;
+  document.getElementById('sgResumeDialog').classList.add('open');
+  return await new Promise(resolve => { _sgResumeResolve = resolve; });
+}
 
 // Clicking Generate first asks whether to persist the sampler settings.
 function generateSamples() {
@@ -2620,7 +2869,14 @@ async function _runGenerateSamples(saveSampler) {
     loras: sgGetLoras(),
     sampler: sgGetSamplerSettings(),
     prompts: prompts,
+    mode: 'new',
   };
+
+  // If samples for this run already exist, ask whether to resume (skip them)
+  // or regenerate everything. Returns null if the user cancels.
+  const mode = await sgResolveGenerationMode(prompts.length);
+  if (mode === null) return;  // cancelled
+  payload.mode = mode;
 
   const btn = document.getElementById('sgGenerateBtn');
   btn.disabled = true;
@@ -2690,10 +2946,12 @@ async function _runGenerateSamples(saveSampler) {
     // even if the user changes selections afterwards.
     sgGeneratedRun = {trainer: sgTrainer, workspace: sgWorkspace, config_file: sgSelectedConfig.config_file};
     document.getElementById('sgEvaluateBtn').disabled = false;
+    const skippedNote = data.skipped
+      ? ` <span style="color:var(--text-dim)">(${data.skipped} already existed, skipped)</span>` : '';
     resultEl.innerHTML = `<div class="sg-result-box">
       <div class="sg-section-title" style="margin-bottom:6px">✓ Done</div>
       <div style="font-size:0.9em; line-height:1.8;">
-        Generated <strong>${data.generated}</strong> image(s)
+        Generated <strong>${data.generated}</strong> image(s)${skippedNote}
         across <strong>${data.steps.length}</strong> checkpoint(s) × <strong>${data.prompts}</strong> prompt(s).<br>
         Saved to:<br><span style="font-family:'JetBrains Mono',monospace; font-size:0.85em; color:var(--neon-cyan)">${data.output_dir}</span>
         <br><span style="color:var(--neon-green)">Click <strong>Evaluate &rarr;</strong> to compare these samples.</span>
