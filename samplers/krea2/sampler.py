@@ -115,6 +115,17 @@ def _split_transformer_state_dict(sd: dict, compute_dtype):
             quant[bare[: -len(".weight")]] = (v, None)                          # fp8, no scale
         else:
             plain[bare] = v.to(compute_dtype)
+
+    # A quantized linear replaces the original nn.Linear wholesale, so any bias
+    # that Linear had must be carried on the Int8Linear — otherwise it's left
+    # orphaned in `plain` and silently dropped. The biased quantized linears are
+    # the in/out projections and the time/text-embedding MLPs (tmlp/txtmlp/tproj),
+    # whose biases drive the timestep modulation; dropping them breaks denoising
+    # entirely (pure-noise output). Pull each one out of `plain` onto its entry.
+    quant = {
+        path: (w8, scale, plain.pop(path + ".bias", None))
+        for path, (w8, scale) in quant.items()
+    }
     return plain, quant
 
 
@@ -228,6 +239,19 @@ def _load_text_encoder(clip_path: str, device, torch_dtype, max_len: int):
 
     if single_file:
         from safetensors import safe_open
+        # Fail fast on a wrong file (e.g. a VAE picked into the CLIP slot). The
+        # model is built on a real device, so a non-matching checkpoint would
+        # otherwise load nothing yet leave a randomly-initialized text encoder
+        # behind (no meta tensors to flag) -> silent garbage conditioning -> noise.
+        with safe_open(clip_path, framework="pt") as f:
+            file_keys = list(f.keys())
+        if not any("language_model" in k for k in file_keys):
+            raise RuntimeError(
+                f"'{clip_path}' does not look like a Qwen3-VL text encoder "
+                f"(no language-model weights found). Point the CLIP / text-encoder "
+                f"field at the Qwen3-VL checkpoint (e.g. qwen3vl_4b_bf16.safetensors), "
+                f"not a VAE or other model."
+            )
         config = AutoConfig.from_pretrained(repo, token=token)
         # Build on CPU (not meta) so computed buffers like RoPE inv_freq get real
         # values; default dtype set so the (transiently full) model is bf16, not
@@ -246,8 +270,17 @@ def _load_text_encoder(clip_path: str, device, torch_dtype, max_len: int):
                     continue
                 sd[k] = f.get_tensor(k)
         # assign=True swaps in the file tensors; built buffers (RoPE) are kept.
-        te.load_state_dict(sd, strict=False, assign=True)
+        loaded = te.load_state_dict(sd, strict=False, assign=True)
         te.tie_weights()  # re-tie lm_head <-> embed_tokens after assign
+        # Guard against a structurally-similar but wrong checkpoint: if almost
+        # nothing matched, the encoder is still random -> reject it explicitly.
+        expected = len(te.state_dict())
+        matched = expected - len(loaded.missing_keys)
+        if matched < expected * 0.5:
+            raise RuntimeError(
+                f"'{clip_path}' only provided {matched}/{expected} of the Qwen3-VL "
+                f"text-encoder tensors; it is not a compatible Qwen3-VL checkpoint."
+            )
         meta_left = [n for n, t in te.named_parameters() if t.is_meta]
         if meta_left:
             raise RuntimeError(f"Qwen3-VL has unloaded weights: {meta_left[:5]}")
@@ -357,9 +390,15 @@ class Krea2Sampler(Sampler):
         with torch.device("meta"):
             transformer = SingleStreamDiT(config)
         plain, quant = _load_transformer_state_dict(files.model_path, torch_dtype)
-        for path, (w8, scale) in quant.items():
-            set_submodule(transformer, path, Int8Linear(w8, scale))
-        missing, _ = transformer.load_state_dict(plain, strict=False, assign=True)
+        for path, (w8, scale, bias) in quant.items():
+            set_submodule(transformer, path, Int8Linear(w8, scale, bias))
+        missing, unexpected = transformer.load_state_dict(plain, strict=False, assign=True)
+        if unexpected:
+            raise RuntimeError(
+                f"Krea2 transformer got {len(unexpected)} unexpected weights the "
+                f"architecture has no home for (first few: {unexpected[:5]}). The "
+                f"checkpoint layout may differ from the expected Krea2 MMDiT."
+            )
         meta_left = [n for n, p in transformer.named_parameters() if p.is_meta]
         if meta_left:
             raise RuntimeError(

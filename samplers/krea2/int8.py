@@ -32,7 +32,12 @@ class QuantLinear(nn.Module):
             self.register_buffer("scale", scale, persistent=False)
         else:
             self.scale = None
-        self.bias = bias
+        # Register the bias as a buffer too so it follows the module to the GPU
+        # (a plain attribute would stay on CPU and break the forward matmul).
+        if bias is not None:
+            self.register_buffer("bias", bias, persistent=False)
+        else:
+            self.bias = None
         self.out_features, self.in_features = qweight.shape
         self._loras: list[tuple] = []  # (A[r,in], B[out,r], scale)
 

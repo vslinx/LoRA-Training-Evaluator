@@ -139,7 +139,7 @@ straight into the evaluator.
 |--------------|--------|
 | SDXL / Pony / Illustrious / NoobAI | Supported (via diffusers) |
 | Z-Image (Base/Turbo) | Supported (via diffusers `ZImagePipeline`) |
-| Krea2 | Experimental / work-in-progress (loads & runs; output quality not yet validated) |
+| Krea2 | Supported (single-file MMDiT incl. fp8/int8 weight-only; Qwen3-VL text encoder + Qwen-Image VAE) |
 | Anima | Planned |
 
 Notes:
@@ -204,7 +204,7 @@ LoRA Training Evaluator/
     sdxl/sampler.py       — SDXL/Pony/Illustrious/NoobAI sampler (diffusers)
     zimage/               — Z-Image (Base/Turbo) sampler; single-file + folder
                             loading, GGUF/safetensors Qwen3 TE, vendored configs
-    krea2/                — Krea2 sampler (experimental; vendored arch, see NOTICE.md)
+    krea2/                — Krea2 sampler (single-file MMDiT, fp8/int8; vendored arch, see NOTICE.md)
   static/
     index.html            — Web UI (single-page app)
   config/                 — persisted per-family sample settings (gitignored)

@@ -48,7 +48,7 @@ workspace → run selection, then renders samples for every saved checkpoint:
 |--------------|--------|
 | SDXL / Pony / Illustrious / NoobAI | Supported (diffusers `StableDiffusionXLPipeline`) |
 | Z-Image (Base / Turbo) | Supported (diffusers `ZImagePipeline`) |
-| Krea2 | Experimental / WIP — loads, runs and saves end-to-end, but output quality is not yet validated. Included intentionally; **not** considered done. |
+| Krea2 | Supported — native single-file MMDiT (incl. fp8 / int8 weight-only), Qwen3-VL text encoder, Qwen-Image / Wan VAEs. |
 | Anima | Planned |
 
 **Supported trainers for sampling**: OneTrainer, AI Toolkit and Anima all expose
@@ -144,11 +144,13 @@ are lazy, so the app and evaluator run fine without the sampling extras installe
 
 ## Notes / known limitations
 
-- **Krea2 is experimental** and intentionally left in this PR (not merged as a
-  finished feature). It loads (incl. INT8 weight-only / fp8), applies LoRAs,
-  encodes via Qwen3-VL, and decodes via the Qwen-Image / Wan VAEs, but the
-  generated image quality still needs validation against a reference. SDXL and
-  Z-Image are the production-ready paths.
+- **Krea2** loads single-file ComfyUI MMDiT checkpoints (incl. fp8 / int8
+  weight-only, dequantized per-forward to fit 24 GB), applies LoRAs as additive
+  branches on the quantized linears, encodes via Qwen3-VL, and decodes via the
+  Qwen-Image / Wan VAEs. The quantized loader carries each linear's bias onto its
+  `Int8Linear` (the timestep-modulation biases are essential — dropping them
+  produced pure noise), and rejects a non-Qwen3-VL file in the text-encoder slot
+  instead of silently running an untrained encoder.
 - **Z-Image's `dpmpp_2m` / `uni_pc` samplers** are wired and produce sane flow
   sigmas; `euler` is the visually-validated path.
 - Resume matches existing samples by `(step, prompt index)`, so it assumes the

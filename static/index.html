@@ -2762,16 +2762,22 @@ async function sgDeleteSamples() {
 }
 
 // ── Generate ──
+// Parse a numeric field but keep a valid 0 (|| would clobber it back to the
+// default) — cfg 0 disables CFG, shift 0 is a valid shift.
+function sgNum(id, fallback) {
+  const v = parseFloat(document.getElementById(id).value);
+  return Number.isFinite(v) ? v : fallback;
+}
 function sgGetSamplerSettings() {
   return {
     name: document.getElementById('sgSampler').value,
     scheduler: document.getElementById('sgScheduler').value,
     steps: parseInt(document.getElementById('sgSteps').value) || 20,
-    cfg: parseFloat(document.getElementById('sgCfg').value) || 7,
+    cfg: sgNum('sgCfg', 7),
     width: parseInt(document.getElementById('sgWidth').value) || 1024,
     height: parseInt(document.getElementById('sgHeight').value) || 1024,
     seed: parseInt(document.getElementById('sgSeed').value) || 42,
-    shift: parseFloat(document.getElementById('sgShift').value) || 3,
+    shift: sgNum('sgShift', 3),
   };
 }
 
