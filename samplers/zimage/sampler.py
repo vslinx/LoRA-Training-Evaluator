@@ -72,6 +72,28 @@ def _sigma_kwargs(spacing: str) -> dict:
     }.get(spacing, {})
 
 
+def _make_unipc(**kwargs):
+    """UniPC scheduler that keeps ``sigmas`` on the timestep device.
+
+    Stock ``UniPCMultistepScheduler.set_timesteps`` parks ``self.sigmas`` on the
+    CPU, but its ``multistep_uni_*_bh_update`` methods index those CPU sigmas and
+    then ``torch.stack`` them together with ``torch.ones((), device=sample.device)``.
+    On CUDA that raises "Expected all tensors to be on the same device" from the
+    second step on (order ≥ 2). ``FlowMatchEulerDiscreteScheduler`` dodges this by
+    moving sigmas onto the sample device inside ``step``; UniPC never does. We
+    restore parity by moving ``sigmas`` back onto the timestep device after
+    ``set_timesteps`` (the timesteps are already placed there by diffusers).
+    """
+    from diffusers import UniPCMultistepScheduler
+
+    class _DeviceUniPCMultistepScheduler(UniPCMultistepScheduler):
+        def set_timesteps(self, *args, **kw):
+            super().set_timesteps(*args, **kw)
+            self.sigmas = self.sigmas.to(self.timesteps.device)
+
+    return _DeviceUniPCMultistepScheduler(**kwargs)
+
+
 def _build_scheduler(sampler: str, scheduler: str, shift: float):
     """Build the scheduler for the chosen Z-Image sampler.
 
@@ -82,7 +104,7 @@ def _build_scheduler(sampler: str, scheduler: str, shift: float):
     diffusers' resolution-derived dynamic shift.
     """
     from diffusers import (FlowMatchEulerDiscreteScheduler,
-                           DPMSolverMultistepScheduler, UniPCMultistepScheduler)
+                           DPMSolverMultistepScheduler)
 
     smp = (sampler or "euler").lower()
     if smp not in _ALLOWED_SPACING:
@@ -102,7 +124,7 @@ def _build_scheduler(sampler: str, scheduler: str, shift: float):
                 prediction_type="flow_prediction", use_dynamic_shifting=True,
                 solver_order=2, **sigma_kw)
         if smp == "uni_pc":
-            return UniPCMultistepScheduler(
+            return _make_unipc(
                 num_train_timesteps=1000, use_flow_sigmas=True,
                 prediction_type="flow_prediction", use_dynamic_shifting=False,
                 flow_shift=shift, **sigma_kw)
