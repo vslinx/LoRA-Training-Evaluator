@@ -140,7 +140,7 @@ straight into the evaluator.
 | SDXL / Pony / Illustrious / NoobAI | Supported (via diffusers) |
 | Z-Image (Base/Turbo) | Supported (via diffusers `ZImagePipeline`) |
 | Krea2 | Supported (single-file MMDiT incl. fp8/int8 weight-only; Qwen3-VL text encoder + Qwen-Image VAE) |
-| Anima | Planned |
+| Anima | Supported (single-file `MiniTrainDIT` incl. LLM adapter; Qwen3-0.6B text encoder + WanVAE) |
 
 Notes:
 - SDXL loads all-in-one single-file checkpoints; CLIP/VAE are optional (baked in).
@@ -162,6 +162,15 @@ Notes:
   and `uni_pc` (UniPC); the **scheduler** dropdown is the sigma spacing
   (`normal`/`beta`/`karras`). `beta`/`karras` only apply to `euler` — the
   multistep solvers fall back to `normal` (other spacings blow up flow sigmas).
+- Anima (AI Toolkit can't train it, so samples come from the Anima Standalone
+  Trainer) is single-file only: point **Model** at the Anima DiT
+  (`anima_baseV10.safetensors`), **CLIP** at the Qwen3-0.6B text encoder
+  (`qwen_3_06b_base.safetensors`) and **VAE** at the WanVAE
+  (`qwen_image_vae.safetensors`). The base checkpoint carries an LLM adapter, so
+  conditioning uses a dual tokenization (Qwen3 hidden states + T5 target tokens);
+  configs/tokenizers are bundled (`samplers/anima/assets/`) for offline loading.
+  Sampling is rectified-flow Euler (linear `1 → 0` sigmas, no shift), so the only
+  sampler/scheduler is `euler` / `normal`.
 - The sampler/scheduler dropdowns now list **only what the selected model family
   supports** (served per-model by `/api/sampler-options?model=...`).
 - Generated samples are written with the trainer's filename convention, so they
@@ -205,6 +214,8 @@ LoRA Training Evaluator/
     zimage/               — Z-Image (Base/Turbo) sampler; single-file + folder
                             loading, GGUF/safetensors Qwen3 TE, vendored configs
     krea2/                — Krea2 sampler (single-file MMDiT, fp8/int8; vendored arch, see NOTICE.md)
+    anima/                — Anima sampler (single-file MiniTrainDIT + LLM adapter,
+                            Qwen3-0.6B TE, WanVAE; vendored arch, see NOTICE.md)
   static/
     index.html            — Web UI (single-page app)
   config/                 — persisted per-family sample settings (gitignored)

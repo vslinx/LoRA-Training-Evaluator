@@ -49,7 +49,7 @@ workspace → run selection, then renders samples for every saved checkpoint:
 | SDXL / Pony / Illustrious / NoobAI | Supported (diffusers `StableDiffusionXLPipeline`) |
 | Z-Image (Base / Turbo) | Supported (diffusers `ZImagePipeline`) |
 | Krea2 | Supported — native single-file MMDiT (incl. fp8 / int8 weight-only), Qwen3-VL text encoder, Qwen-Image / Wan VAEs. |
-| Anima | Planned |
+| Anima | Supported — native single-file `MiniTrainDIT` (Cosmos-Predict2 DiT) with the baseV10 LLM adapter, Qwen3-0.6B text encoder, WanVAE. |
 
 **Supported trainers for sampling**: OneTrainer, AI Toolkit and Anima all expose
 their saved checkpoints, recognized model, prompts and output layout to the
@@ -72,6 +72,22 @@ Z-Image highlights:
   diffusers' resolution-derived shift. The sampler dropdown offers `euler`,
   `dpmpp_2m` and `uni_pc`, with `beta`/`karras` sigma spacing limited to the
   cases where it produces sane flow sigmas.
+
+Anima highlights:
+- AI Toolkit can't train Anima, so its samples come from the Anima Standalone
+  Trainer. Single-file only: the Anima DiT (`anima_baseV10.safetensors`), the
+  Qwen3-0.6B text encoder (`qwen_3_06b_base.safetensors`) and the WanVAE
+  (`qwen_image_vae.safetensors`).
+- The DiT config is derived from the checkpoint tensor shapes; baseV10 carries an
+  **LLM adapter**, so conditioning is a dual tokenization — Qwen3 hidden states as
+  the adapter's *source* plus T5 `input_ids` as its *target* tokens (the T5 model
+  itself is never run). Qwen3 configs + both tokenizers are vendored for offline
+  loading (`samplers/anima/assets/`).
+- LoRAs use the kohya/ComfyUI `lora_unet_…` convention (underscore-flattened
+  module paths), merged into the DiT weights by walking the model to rebuild the
+  name map (`self_attn` etc. make the flattening non-reversible by string surgery).
+- Sampling is rectified-flow Euler (linear `1 → 0` sigmas, no shift, doubled-batch
+  CFG), so the only sampler/scheduler exposed is `euler` / `normal`.
 
 Per-family sampler/scheduler dropdowns are now served by
 `/api/sampler-options?model=...`, so the UI only lists what the selected family
@@ -153,6 +169,11 @@ are lazy, so the app and evaluator run fine without the sampling extras installe
   instead of silently running an untrained encoder.
 - **Z-Image's `dpmpp_2m` / `uni_pc` samplers** are wired and produce sane flow
   sigmas; `euler` is the visually-validated path.
+- **Anima** vendors the `MiniTrainDIT` architecture + WanVAE from the Anima
+  Standalone Trainer, stubbing out its block-swap / offloading machinery (never
+  used single-GPU). The base + LoRA + LLM-adapter paths are visually validated at
+  1024² (base model, and a kohya character LoRA that took full effect). Only the
+  baseV10 LLM-adapter checkpoint layout is exercised.
 - Resume matches existing samples by `(step, prompt index)`, so it assumes the
   prompt list is in the same order as the interrupted run.
 - `kohya_ss` and `musubi_tuner` remain listed as planned trainers.

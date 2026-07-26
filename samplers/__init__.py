@@ -15,6 +15,7 @@ _SAMPLER_REGISTRY: dict[str, str] = {
     "zimage_base": "samplers.zimage.sampler:ZImageSampler",
     "zimage_turbo": "samplers.zimage.sampler:ZImageSampler",
     "krea2": "samplers.krea2.sampler:Krea2Sampler",
+    "anima": "samplers.anima.sampler:AnimaSampler",
 }
 
 
