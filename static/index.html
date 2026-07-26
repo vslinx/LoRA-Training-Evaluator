@@ -765,6 +765,368 @@
     height: 3px;
     border-radius: 2px;
   }
+
+  /* ── Header action button (view toggle) ── */
+  .header-action {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-color: var(--neon-cyan);
+    color: var(--text-bright);
+    font-weight: 600;
+    font-size: 0.82em;
+  }
+  .header-action:hover {
+    background: var(--neon-cyan-dim);
+    box-shadow: 0 0 20px var(--neon-cyan-dim);
+    color: #fff;
+  }
+  .header-action #viewToggleIcon { font-size: 1.05em; line-height: 1; color: var(--neon-cyan); }
+  /* Override the generic `header span` rule for the toggle button's labels */
+  header .header-action span { color: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
+  header .header-action #viewToggleIcon { color: var(--neon-cyan); }
+
+  /* ── Sample Generation settings ── */
+  #sgMainContent { container-type: inline-size; }
+
+  .sg-columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 22px;
+    align-items: start;
+    max-width: 1500px;
+  }
+  /* When the panel is wide enough, split into two columns. Container query so
+     it reacts to the actual panel width, independent of the 360px sidebar. */
+  @container (min-width: 900px) {
+    .sg-columns { grid-template-columns: 1fr 1fr; }
+  }
+  .sg-col { min-width: 0; }
+
+  .sg-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+
+  .sg-section-title {
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--neon-cyan);
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .sg-section-hint, .sg-section-title .sg-section-hint {
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-dim);
+    font-size: 0.92em;
+    font-weight: 400;
+  }
+
+  .sg-optional {
+    color: var(--text-dim);
+    opacity: 0.7;
+    font-size: 0.92em;
+  }
+  .sg-optional.sg-required {
+    color: var(--neon-amber);
+    opacity: 1;
+  }
+
+  .sg-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  textarea.sg-textarea {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78em;
+    line-height: 1.6;
+    outline: none;
+    resize: vertical;
+    width: 100%;
+    transition: all 0.25s ease;
+  }
+  textarea.sg-textarea:focus {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 0 3px var(--neon-pink-dim), 0 0 20px var(--neon-pink-dim);
+  }
+
+  /* Prompt rows */
+  .sg-prompt-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .sg-prompt-index {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--neon-cyan-dim);
+    color: var(--neon-cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72em;
+    font-weight: 700;
+  }
+  .sg-prompt-row textarea { flex: 1; }
+  .sg-prompt-remove {
+    flex-shrink: 0;
+    padding: 7px 11px;
+    font-size: 1em;
+    line-height: 1;
+    border-color: var(--border);
+    color: var(--text-dim);
+    align-self: stretch;
+  }
+  .sg-prompt-remove:hover {
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+    background: var(--neon-pink-dim);
+    box-shadow: none;
+  }
+
+  /* LoRA rows */
+  .sg-lora-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .sg-lora-row .sg-lora-path { flex: 1; min-width: 0; }
+  .sg-lora-weight-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .sg-lora-weight-wrap label {
+    font-size: 0.72em;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .sg-lora-weight { width: 78px; }
+  .sg-lora-remove {
+    flex-shrink: 0;
+    padding: 9px 11px;
+    font-size: 1em;
+    line-height: 1;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .sg-lora-remove:hover {
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+    background: var(--neon-pink-dim);
+    box-shadow: none;
+  }
+  .sg-lora-empty {
+    font-size: 0.8em;
+    color: var(--text-dim);
+    opacity: 0.7;
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .sg-add-prompt {
+    width: 100%;
+    margin-top: 4px;
+    border-style: dashed;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .sg-add-prompt:hover {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    background: var(--neon-cyan-dim);
+  }
+
+  /* Prompt gallery */
+  .sg-gallery {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .sg-gallery-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .sg-gallery-title {
+    font-size: 0.78em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .sg-gallery-save {
+    padding: 5px 10px;
+    font-size: 0.8em;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .sg-gallery-save:hover {
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+  }
+  .sg-gallery-list { display: flex; flex-direction: column; gap: 6px; }
+  .sg-gallery-empty { font-size: 0.82em; color: var(--text-dim); font-style: italic; }
+  .sg-gallery-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .sg-gallery-snippet {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.84em;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .sg-gallery-add, .sg-gallery-del {
+    flex-shrink: 0;
+    padding: 4px 9px;
+    font-size: 0.82em;
+    line-height: 1;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .sg-gallery-add:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+  .sg-gallery-del:hover { border-color: var(--neon-pink); color: var(--neon-pink); }
+
+  #sgDetectBox .sg-detect-ok { color: var(--neon-green); font-weight: 600; }
+  #sgDetectBox .sg-detect-warn { color: var(--neon-amber); font-weight: 600; }
+
+  #sgGenerateBtn {
+    padding: 14px;
+    font-size: 0.95em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    flex-shrink: 0;
+  }
+  #sgGenerateBtn:not(:disabled):hover {
+    background: var(--neon-cyan-dim);
+    box-shadow: 0 0 30px var(--neon-cyan-dim), inset 0 0 30px var(--neon-cyan-dim);
+  }
+
+  #sgEvaluateBtn {
+    padding: 14px;
+    font-size: 0.95em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+    flex-shrink: 0;
+  }
+  #sgEvaluateBtn:not(:disabled):hover {
+    background: var(--neon-green-dim);
+    box-shadow: 0 0 30px var(--neon-green-dim), inset 0 0 30px var(--neon-green-dim);
+  }
+
+  .sg-result-box {
+    background: var(--bg-card);
+    border: 1px solid var(--neon-cyan);
+    border-radius: 12px;
+    padding: 20px 22px;
+    max-width: 820px;
+    box-shadow: 0 0 30px var(--neon-cyan-dim);
+  }
+  .sg-result-box pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74em;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  /* Stop / delete / keep buttons */
+  .sg-stop-btn {
+    padding: 5px 12px;
+    font-size: 0.78em;
+    text-transform: none;
+    letter-spacing: 0;
+    border-color: var(--neon-orange);
+    color: var(--neon-orange);
+  }
+  .sg-stop-btn:not(:disabled):hover { background: var(--neon-orange-dim); box-shadow: 0 0 16px var(--neon-orange-dim); }
+  .sg-del-btn { border-color: var(--neon-pink); color: var(--neon-pink); padding: 8px 14px; font-size: 0.82em; }
+  .sg-del-btn:hover { background: var(--neon-pink-dim); box-shadow: 0 0 16px var(--neon-pink-dim); }
+  .sg-keep-btn { border-color: var(--border); color: var(--text-dim); padding: 8px 14px; font-size: 0.82em; }
+  .sg-keep-btn:hover { border-color: var(--text-dim); color: var(--text); background: var(--bg-hover); box-shadow: none; }
+
+  /* Save-sampler modal */
+  .sg-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(6px);
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+  }
+  .sg-modal.open { display: flex; }
+  .sg-modal-box {
+    background: var(--bg-card);
+    border: 1px solid var(--neon-cyan);
+    border-radius: 14px;
+    padding: 26px 28px;
+    max-width: 460px;
+    box-shadow: 0 0 50px var(--neon-cyan-dim);
+  }
+  .sg-modal-title {
+    font-size: 1.05em; font-weight: 700; color: var(--text-bright); margin-bottom: 12px;
+  }
+  .sg-modal-body { font-size: 0.9em; line-height: 1.7; color: var(--text); }
+  .sg-modal-body strong { color: var(--neon-cyan); }
+  .sg-modal-check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82em; color: var(--text-dim); margin: 16px 0 4px;
+    cursor: pointer;
+  }
+  .sg-modal-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .sg-modal-actions button { padding: 10px 16px; font-size: 0.85em; }
+  #sgSaveGenBtn { border-color: var(--neon-green); color: var(--neon-green); }
+  #sgSaveGenBtn:hover { background: var(--neon-green-dim); box-shadow: 0 0 20px var(--neon-green-dim); }
 </style>
 </head>
 <body>
@@ -772,8 +1134,13 @@
 <header>
   <h1>LoRA Training Evaluator</h1>
   <span id="headerSubtitle">Face Likeness Comparison</span>
+  <button id="viewToggleBtn" class="header-action" onclick="toggleView()">
+    <span id="viewToggleIcon">&#9889;</span>
+    <span id="viewToggleText">Sample Generation</span>
+  </button>
 </header>
 
+<div id="evaluatorView">
 <div class="layout">
   <!-- Sidebar -->
   <aside class="sidebar">
@@ -901,10 +1268,250 @@
     </div>
   </main>
 </div>
+</div>
+<!-- ════════════════════ Sample Generation View ════════════════════ -->
+<div id="sampleGenView" style="display:none">
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <!-- Step 1: Trainer -->
+    <div class="wizard-step" id="sgStep1">
+      <h2><span class="step-number" id="sgStep1num">1</span> Trainer</h2>
+      <div class="form-group">
+        <select id="sgTrainerSelect" onchange="sgOnTrainerChange()">
+          <option value="">Select trainer...</option>
+        </select>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 2: Workspace -->
+    <div class="wizard-step disabled" id="sgStep2">
+      <h2><span class="step-number" id="sgStep2num">2</span> Workspace</h2>
+      <div class="form-group">
+        <label id="sgWorkspaceLabel">Select workspace folder</label>
+        <div class="folder-row">
+          <input type="text" id="sgWorkspacePath" placeholder="Click Browse..." spellcheck="false" readonly>
+          <button class="btn-browse" onclick="sgBrowseWorkspace()">Browse</button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 3: Training Run -->
+    <div class="wizard-step disabled" id="sgStep3">
+      <h2><span class="step-number" id="sgStep3num">3</span> Training Run</h2>
+      <div class="config-list" id="sgConfigList"></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Generate -->
+    <button onclick="generateSamples()" id="sgGenerateBtn" disabled>
+      Generate Samples
+    </button>
+
+    <!-- Evaluate (enabled after generation completes) -->
+    <button onclick="evaluateGeneratedRun()" id="sgEvaluateBtn" disabled>
+      Evaluate &rarr;
+    </button>
+  </aside>
+
+  <!-- Main Content: Settings -->
+  <main class="main" id="sgMainContent">
+
+    <!-- Placeholder before a run is selected -->
+    <div class="instructions" id="sgInstructions">
+      <h2>Sample Generation</h2>
+      <ol>
+        <li><strong>Select your trainer</strong> &mdash; the tool whose workspace holds your LoRA checkpoints.</li>
+        <li><strong>Browse to your workspace</strong> &mdash; same folder you use for evaluation.</li>
+        <li><strong>Pick a training run</strong> &mdash; its config is inspected to recognize the base model.</li>
+        <li><strong>Confirm the model &amp; settings</strong> &mdash; adjust model/CLIP/VAE paths and sampler.</li>
+        <li><strong>Add prompts</strong> &mdash; one image will be generated per prompt, per saved step.</li>
+        <li><strong>Generate</strong> &mdash; samples are written to the run's <code>samples</code> folder.</li>
+      </ol>
+      <p>Each saved LoRA step is loaded automatically and sampled with the prompts below.</p>
+    </div>
+
+    <!-- Settings form (shown once a run is selected) -->
+    <div id="sgSettings" style="display:none">
+      <h2>Sample Settings</h2>
+
+      <div class="sg-columns">
+      <!-- ── Left column: model + sampler config ── -->
+      <div class="sg-col">
+
+      <!-- Model recognition -->
+      <div class="sg-section">
+        <div class="sg-section-title">Base Model</div>
+        <div class="info-box" id="sgDetectBox" style="margin-bottom:12px"></div>
+        <div class="form-group">
+          <label>Model family</label>
+          <select id="sgModelSelect"></select>
+        </div>
+      </div>
+
+      <!-- Model files -->
+      <div class="sg-section">
+        <div class="sg-section-title">Model Files</div>
+        <div class="form-group">
+          <label>Model / checkpoint</label>
+          <div class="folder-row">
+            <input type="text" id="sgModelPath" placeholder="Path to model..." spellcheck="false">
+            <button class="btn-browse" onclick="sgBrowseFile('sgModelPath')">Browse</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>CLIP / text encoder <span class="sg-optional" id="sgClipOptional">(optional)</span></label>
+          <div class="folder-row">
+            <input type="text" id="sgClipPath" placeholder="Path to CLIP / text encoder..." spellcheck="false">
+            <button class="btn-browse" onclick="sgBrowseFile('sgClipPath')">Browse</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>VAE <span class="sg-optional" id="sgVaeOptional">(optional)</span></label>
+          <div class="folder-row">
+            <input type="text" id="sgVaePath" placeholder="Path to VAE..." spellcheck="false">
+            <button class="btn-browse" onclick="sgBrowseFile('sgVaePath')">Browse</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LoRAs -->
+      <div class="sg-section">
+        <div class="sg-section-title">
+          LoRAs for Sampling
+          <span class="sg-section-hint">e.g. a turbo / speed LoRA &mdash; applied on top of each checkpoint</span>
+        </div>
+        <div id="sgLoraList"></div>
+        <button class="sg-add-prompt" onclick="sgAddLora()">+ Add LoRA</button>
+      </div>
+
+      <!-- Sampler -->
+      <div class="sg-section">
+        <div class="sg-section-title">Sampler Settings</div>
+        <div class="sg-grid">
+          <div class="form-group">
+            <label>Sampler</label>
+            <select id="sgSampler"></select>
+          </div>
+          <div class="form-group">
+            <label>Scheduler</label>
+            <select id="sgScheduler"></select>
+          </div>
+          <div class="form-group">
+            <label>Steps</label>
+            <input type="number" id="sgSteps" min="1" max="200" value="20">
+          </div>
+          <div class="form-group">
+            <label>CFG / Guidance</label>
+            <input type="number" id="sgCfg" min="0" max="30" step="0.1" value="7">
+          </div>
+          <div class="form-group">
+            <label>Width</label>
+            <input type="number" id="sgWidth" min="64" step="8" value="1024">
+          </div>
+          <div class="form-group">
+            <label>Height</label>
+            <input type="number" id="sgHeight" min="64" step="8" value="1024">
+          </div>
+          <div class="form-group">
+            <label>Seed</label>
+            <input type="number" id="sgSeed" value="42">
+          </div>
+          <div class="form-group">
+            <label>Shift <span class="sg-optional">(flow models, e.g. Z-Image)</span></label>
+            <input type="number" id="sgShift" min="0" step="0.1" value="3">
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /sg-col left -->
+
+      <!-- ── Right column: prompts + output ── -->
+      <div class="sg-col">
+
+      <!-- Prompts -->
+      <div class="sg-section">
+        <div class="sg-section-title">
+          Prompts
+          <span class="sg-section-hint" id="sgPromptCount"></span>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Negative prompt <span class="sg-optional">(applied to all)</span></label>
+          <textarea id="sgNegativePrompt" class="sg-textarea" rows="2" placeholder="Negative prompt..."></textarea>
+        </div>
+        <div id="sgPromptList"></div>
+        <button class="sg-add-prompt" onclick="sgAddPrompt()">+ Add Prompt</button>
+
+        <!-- Prompt gallery: reusable saved prompts -->
+        <div class="sg-gallery">
+          <div class="sg-gallery-head">
+            <span class="sg-gallery-title">Prompt Gallery</span>
+            <button class="sg-gallery-save" onclick="sgSaveCurrentPromptsToGallery()"
+              title="Save the current prompts to the gallery">+ Save current</button>
+          </div>
+          <div id="sgGalleryList" class="sg-gallery-list"></div>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="sg-section">
+        <div class="sg-section-title">Output</div>
+        <div class="info-box" id="sgOutputInfo"></div>
+      </div>
+
+      <!-- Result / status -->
+      <div id="sgResult" style="display:none"></div>
+
+      </div><!-- /sg-col right -->
+      </div><!-- /sg-columns -->
+    </div>
+  </main>
+</div>
+</div>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
   <img id="lightboxImg" src="">
+</div>
+
+<!-- Save-sampler-settings dialog (shown when clicking Generate Samples) -->
+<div class="sg-modal" id="sgSaveDialog">
+  <div class="sg-modal-box">
+    <div class="sg-modal-title">Save sampler settings?</div>
+    <div class="sg-modal-body">
+      Save these sampler settings (sampler, scheduler, steps, CFG, size, seed) as the
+      default for <strong id="sgSaveDialogFamily">this model</strong>? They'll auto-fill
+      on future runs so you don't have to re-enter them.
+    </div>
+    <label class="sg-modal-check">
+      <input type="checkbox" id="sgSaveDialogRemember"> Remember my choice this session
+    </label>
+    <div class="sg-modal-actions">
+      <button id="sgSaveGenBtn" onclick="sgConfirmGenerate(true)">Save &amp; Generate</button>
+      <button onclick="sgConfirmGenerate(false)">Generate without saving</button>
+      <button class="sg-keep-btn" onclick="sgCloseSaveDialog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="sg-modal" id="sgResumeDialog">
+  <div class="sg-modal-box">
+    <div class="sg-modal-title">Samples already exist</div>
+    <div class="sg-modal-body" id="sgResumeBody">
+      Some samples for this run already exist.
+    </div>
+    <div class="sg-modal-actions">
+      <button id="sgResumeContinueBtn" onclick="sgResolveResume('continue')">Continue (skip existing)</button>
+      <button onclick="sgResolveResume('new')">Regenerate all</button>
+      <button class="sg-keep-btn" onclick="sgResolveResume(null)">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
@@ -1486,6 +2093,935 @@ function renderChart(runs) {
 function openLightbox(src) {
   document.getElementById('lightboxImg').src = src;
   document.getElementById('lightbox').classList.add('open');
+}
+
+// ════════════════════ Sample Generation ════════════════════
+
+// ── State ──
+let sgTrainer = '';
+let sgWorkspace = '';
+let sgConfigs = [];
+let sgSelectedConfig = null;
+let sgModels = {};          // {key: {label, group}}
+let sgSavedFamilies = {};   // persisted {family: {model_path, clip_path, vae_path, loras}}
+let sgPromptCounter = 0;
+let sgLoraCounter = 0;
+let sgGeneratedRun = null;  // {trainer, workspace, config_file} of the last completed generation
+let sgLastRunFiles = [];    // files written by the last (possibly stopped) generation
+
+// SDXL family: CLIP + VAE are typically baked into the checkpoint, so optional.
+const SG_SDXL_FAMILY = ['sdxl', 'pony', 'illustrious', 'noobai'];
+
+// ComfyUI built-in samplers / schedulers (KSampler).
+const SG_SAMPLERS = [
+  'euler', 'euler_cfg_pp', 'euler_ancestral', 'euler_ancestral_cfg_pp',
+  'heun', 'heunpp2', 'dpm_2', 'dpm_2_ancestral', 'lms', 'dpm_fast', 'dpm_adaptive',
+  'dpmpp_2s_ancestral', 'dpmpp_2s_ancestral_cfg_pp', 'dpmpp_sde', 'dpmpp_sde_gpu',
+  'dpmpp_2m', 'dpmpp_2m_cfg_pp', 'dpmpp_2m_sde', 'dpmpp_2m_sde_gpu',
+  'dpmpp_3m_sde', 'dpmpp_3m_sde_gpu', 'ddpm', 'lcm', 'ipndm', 'ipndm_v', 'deis',
+  'res_multistep', 'res_multistep_cfg_pp', 'res_multistep_ancestral',
+  'res_multistep_ancestral_cfg_pp', 'gradient_estimation', 'gradient_estimation_cfg_pp',
+  'er_sde', 'seeds_2', 'seeds_3', 'sa_solver', 'sa_solver_pece',
+  'ddim', 'uni_pc', 'uni_pc_bh2',
+];
+const SG_SCHEDULERS = [
+  'normal', 'karras', 'exponential', 'sgm_uniform', 'simple',
+  'ddim_uniform', 'beta', 'linear_quadratic', 'kl_optimal',
+];
+
+// ── Init: load trainers + supported models ──
+(async function sgInit() {
+  // Trainers (reuse the same endpoint as the evaluator)
+  try {
+    const res = await fetch('/api/trainers');
+    const data = await res.json();
+    const sel = document.getElementById('sgTrainerSelect');
+    for (const [key, label] of Object.entries(data.trainers)) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    }
+  } catch {}
+
+  // Supported sample models
+  try {
+    const res = await fetch('/api/sample-models');
+    const data = await res.json();
+    sgModels = data.models;
+    buildModelDropdown();
+  } catch {}
+
+  // Populate the sampler/scheduler dropdowns with only what the (currently
+  // selected) model family supports.
+  await sgRebuildSamplerOptions();
+
+  // Persisted per-family settings (model files + LoRAs)
+  try {
+    const res = await fetch('/api/sample-settings');
+    const data = await res.json();
+    sgSavedFamilies = data.families || {};
+  } catch {}
+
+  // Saved prompt gallery
+  sgLoadPromptGallery();
+})();
+
+// Rebuild the sampler + scheduler dropdowns to list only what the selected model
+// family supports (per /api/sampler-options?model=...), preserving the original
+// order and the current selection if it's still available.
+async function sgRebuildSamplerOptions() {
+  const model = document.getElementById('sgModelSelect').value || '';
+  let sup = null;
+  try {
+    const r = await fetch('/api/sampler-options?model=' + encodeURIComponent(model));
+    const d = await r.json();
+    sup = {samplers: new Set(d.samplers), schedulers: new Set(d.schedulers)};
+  } catch {}
+  const rebuild = (sel, items, supported) => {
+    const prev = sel.value;
+    sel.innerHTML = '';
+    (supported ? items.filter(s => supported.has(s)) : items)
+      .forEach(s => sel.add(new Option(s, s)));
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  };
+  rebuild(document.getElementById('sgSampler'), SG_SAMPLERS, sup && sup.samplers);
+  rebuild(document.getElementById('sgScheduler'), SG_SCHEDULERS, sup && sup.schedulers);
+}
+
+// Select a dropdown value if the (case-insensitive) option exists; otherwise
+// fall back to a default. Returns true if a config value matched.
+function sgSelectIfPresent(selectEl, value, fallback) {
+  const v = (value || '').toLowerCase();
+  // Only match enabled (functional) options; otherwise use the fallback.
+  const match = [...selectEl.options].find(o => o.value.toLowerCase() === v && !o.disabled);
+  selectEl.value = match ? match.value : fallback;
+  return !!match;
+}
+
+function buildModelDropdown() {
+  const sel = document.getElementById('sgModelSelect');
+  sel.innerHTML = '<option value="">Select model...</option>';
+
+  // Group entries; render grouped ones inside an optgroup.
+  const groups = {};
+  const standalone = [];
+  for (const [key, m] of Object.entries(sgModels)) {
+    if (m.group) {
+      (groups[m.group] ||= []).push([key, m]);
+    } else {
+      standalone.push([key, m]);
+    }
+  }
+
+  for (const [groupName, entries] of Object.entries(groups)) {
+    const og = document.createElement('optgroup');
+    og.label = groupName;
+    for (const [key, m] of entries) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = m.label;
+      og.appendChild(opt);
+    }
+    sel.appendChild(og);
+  }
+  for (const [key, m] of standalone) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = m.label;
+    sel.appendChild(opt);
+  }
+}
+
+// ── View switching ──
+function toggleView() {
+  const showSampleGen = document.getElementById('sampleGenView').style.display === 'none';
+  document.getElementById('sampleGenView').style.display = showSampleGen ? 'block' : 'none';
+  document.getElementById('evaluatorView').style.display = showSampleGen ? 'none' : 'block';
+  document.getElementById('viewToggleText').textContent = showSampleGen ? 'Back to Evaluator' : 'Sample Generation';
+  document.getElementById('viewToggleIcon').innerHTML = showSampleGen ? '&#8592;' : '&#9889;';
+  document.getElementById('headerSubtitle').textContent = showSampleGen
+    ? 'Generate Samples Across Checkpoints'
+    : (comparisonMode === 'likeness' ? 'Face Likeness Comparison' : 'Style Similarity Comparison');
+}
+
+// ── Wizard flow ──
+function sgSetStep(step) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById(`sgStep${i}`);
+    const num = document.getElementById(`sgStep${i}num`);
+    if (i <= step) el.classList.remove('disabled');
+    else el.classList.add('disabled');
+    if (i < step) { num.classList.add('done'); num.textContent = '✓'; }
+    else { num.classList.remove('done'); num.textContent = i; }
+  }
+}
+
+const SG_WORKSPACE_LABELS = {
+  'onetrainer': 'Select the workspace\\run folder',
+  'ai-toolkit': 'Select the output folder',
+  'anima': 'Select the training-ui/jobs folder',
+  'kohya_ss': 'Select the output folder',
+  'musubi_tuner': 'Select the output folder',
+};
+
+function sgOnTrainerChange() {
+  sgTrainer = document.getElementById('sgTrainerSelect').value;
+  sgSelectedConfig = null;
+  sgConfigs = [];
+  document.getElementById('sgWorkspacePath').value = '';
+  document.getElementById('sgConfigList').innerHTML = '';
+  document.getElementById('sgSettings').style.display = 'none';
+  document.getElementById('sgInstructions').style.display = 'block';
+  sgUpdateGenerateBtn();
+
+  if (sgTrainer) {
+    sgSetStep(2);
+    document.getElementById('sgWorkspaceLabel').textContent =
+      SG_WORKSPACE_LABELS[sgTrainer] || 'Select workspace folder';
+  } else {
+    sgSetStep(1);
+  }
+}
+
+async function sgBrowseWorkspace() {
+  const res = await fetch('/api/select-folder', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({title: SG_WORKSPACE_LABELS[sgTrainer] || 'Select Folder'})
+  });
+  const data = await res.json();
+  if (!data.path) return;
+
+  document.getElementById('sgWorkspacePath').value = data.path;
+  sgWorkspace = data.path;
+
+  const valRes = await fetch('/api/validate-workspace', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({trainer: sgTrainer, path: data.path, for_sampling: true})
+  });
+  const valData = await valRes.json();
+  if (!valData.valid) {
+    alert(valData.error || 'This does not look like a valid workspace folder for ' + sgTrainer);
+    return;
+  }
+
+  await sgLoadConfigs();
+}
+
+async function sgLoadConfigs() {
+  const res = await fetch('/api/list-runs-sampling', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({trainer: sgTrainer, run_dir: sgWorkspace})
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    alert(err.detail || 'Failed to load runs');
+    return;
+  }
+
+  const data = await res.json();
+  sgConfigs = data.configs;
+  sgSelectedConfig = null;
+
+  const listEl = document.getElementById('sgConfigList');
+  listEl.innerHTML = sgConfigs.map((c, i) => {
+    const hasCheckpoints = c.steps.length > 0;
+    const stepsLabel = hasCheckpoints
+      ? `<span class="has-samples">${c.steps.length} saved checkpoints</span>`
+      : `<span class="no-samples">no checkpoints found</span>`;
+    return `<div class="config-card" onclick="sgSelectConfig(${i})" id="sg-config-${i}">
+      <span class="config-check">✓</span>
+      <div class="config-name">${c.output_name}</div>
+      <div class="config-meta">${c.start_time}<br>${stepsLabel}</div>
+    </div>`;
+  }).join('');
+
+  sgSetStep(3);
+}
+
+async function sgSelectConfig(index) {
+  // Single-select: clear previous highlight.
+  document.querySelectorAll('#sgConfigList .config-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`sg-config-${index}`).classList.add('selected');
+  sgSelectedConfig = sgConfigs[index];
+  // A freshly-selected run hasn't been generated yet — lock the Evaluate button.
+  document.getElementById('sgEvaluateBtn').disabled = true;
+
+  // Inspect the run's config to recognize the model + pre-fill settings.
+  const res = await fetch('/api/inspect-sampling', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      trainer: sgTrainer,
+      run_dir: sgWorkspace,
+      config_file: sgSelectedConfig.config_file,
+    })
+  });
+  const info = res.ok ? await res.json() : null;
+  sgPopulateForm(info);
+
+  document.getElementById('sgInstructions').style.display = 'none';
+  document.getElementById('sgSettings').style.display = 'block';
+  document.getElementById('sgResult').style.display = 'none';
+  document.getElementById('sgMainContent').scrollTop = 0;
+  sgUpdateGenerateBtn();
+}
+
+async function sgPopulateForm(info) {
+  info = info || {};
+
+  // Model recognition
+  const modelKey = info.model || '';
+  const sel = document.getElementById('sgModelSelect');
+  sel.value = modelKey;
+  // Rebuild sampler/scheduler dropdowns for this family before selecting values.
+  await sgRebuildSamplerOptions();
+  const detectBox = document.getElementById('sgDetectBox');
+  if (modelKey && sgModels[modelKey]) {
+    detectBox.innerHTML = `<span class="sg-detect-ok">✓ Recognized:</span> ${sgModels[modelKey].label}` +
+      ` &mdash; pre-selected below. Change it if this is wrong.`;
+  } else {
+    detectBox.innerHTML = `<span class="sg-detect-warn">⚠ Could not recognize the model</span> from this run's config. ` +
+      `Please pick the correct model below.`;
+  }
+
+  // Model files + LoRAs: prefer the user's saved defaults for this family,
+  // falling back to whatever the run's config gave us.
+  sgApplyFamilyFiles(modelKey, info);
+
+  // Sampler: the user's saved default for this family wins over the run's config.
+  const saved = sgSavedFamilies[modelKey] || {};
+  const s = saved.sampler || info.sampler || {};
+  sgSelectIfPresent(document.getElementById('sgSampler'), s.name, 'euler');
+  sgSelectIfPresent(document.getElementById('sgScheduler'), s.scheduler, 'normal');
+  if (s.steps != null) document.getElementById('sgSteps').value = s.steps;
+  if (s.cfg != null) document.getElementById('sgCfg').value = s.cfg;
+  if (s.width != null) document.getElementById('sgWidth').value = s.width;
+  if (s.height != null) document.getElementById('sgHeight').value = s.height;
+  if (s.seed != null) document.getElementById('sgSeed').value = s.seed;
+  if (s.shift != null) document.getElementById('sgShift').value = s.shift;
+
+  // Prompts
+  document.getElementById('sgNegativePrompt').value = info.negative_prompt || '';
+  document.getElementById('sgPromptList').innerHTML = '';
+  sgPromptCounter = 0;
+  const prompts = (info.prompts && info.prompts.length) ? info.prompts : [''];
+  prompts.forEach(p => sgAddPrompt(p));
+
+  // Output info
+  sgUpdateOutputInfo();
+}
+
+function sgUpdateOutputInfo() {
+  const name = sgSelectedConfig ? sgSelectedConfig.output_name : '';
+  const layouts = {
+    'onetrainer': `<strong>${sgWorkspace}</strong>\\samples\\`,
+    'ai-toolkit': `<strong>${sgWorkspace}</strong>\\${sgSelectedConfig ? sgSelectedConfig.config_file : ''}\\samples\\`,
+    'anima': `<strong>${sgWorkspace}</strong>\\${sgSelectedConfig ? sgSelectedConfig.config_file : ''}\\output\\sample\\`,
+    'kohya_ss': `<strong>${sgWorkspace}</strong>\\sample\\`,
+    'musubi_tuner': `<strong>${sgWorkspace}</strong>\\sample\\`,
+  };
+  const stepCount = sgSelectedConfig ? sgSelectedConfig.steps.length : 0;
+  const promptCount = document.querySelectorAll('#sgPromptList .sg-prompt-row').length;
+  document.getElementById('sgOutputInfo').innerHTML =
+    `Samples are written to:<br>${layouts[sgTrainer] || sgWorkspace}<br>` +
+    `<span style="color:var(--text-dim)">${stepCount} checkpoint(s) &times; ${promptCount} prompt(s) = ` +
+    `<strong>${stepCount * promptCount}</strong> image(s)</span>`;
+}
+
+// ── Model file requirements (CLIP/VAE optional only for SDXL family) ──
+function sgUpdateModelFileRequirements() {
+  const model = document.getElementById('sgModelSelect').value;
+  const isSdxl = SG_SDXL_FAMILY.includes(model);
+  const isZImage = model.startsWith('zimage');
+  const clipOpt = document.getElementById('sgClipOptional');
+  const vaeOpt = document.getElementById('sgVaeOptional');
+  // SDXL: CLIP/VAE baked into the checkpoint → optional.
+  // Z-Image: optional with a diffusers folder (carries them), required with a
+  // single .safetensors transformer.
+  // Krea2 / others: always required.
+  let label;
+  if (isSdxl) label = '(optional)';
+  else if (isZImage) label = '(folder: optional · single file: required)';
+  else label = '(required)';
+  clipOpt.textContent = label;
+  vaeOpt.textContent = label;
+  clipOpt.classList.toggle('sg-required', !isSdxl && !isZImage);
+  vaeOpt.classList.toggle('sg-required', !isSdxl && !isZImage);
+  sgUpdateGenerateBtn();
+}
+
+// ── Per-family persisted settings (model files + LoRAs) ──
+function sgApplyFamilyFiles(family, info) {
+  // Saved user defaults win; otherwise fall back to the run's config values.
+  const saved = sgSavedFamilies[family];
+  const src = saved || info || {};
+  document.getElementById('sgModelPath').value = src.model_path || '';
+  document.getElementById('sgClipPath').value = src.clip_path || '';
+  document.getElementById('sgVaePath').value = src.vae_path || '';
+
+  // LoRAs only come from saved defaults (a run's config has no extra LoRAs).
+  document.getElementById('sgLoraList').innerHTML = '';
+  sgLoraCounter = 0;
+  const loras = (saved && saved.loras) ? saved.loras : [];
+  loras.forEach(l => sgAddLora(l.path, l.weight != null ? l.weight : 1.0));
+  sgRenderLoraEmpty();
+
+  sgUpdateModelFileRequirements();
+}
+
+// When the user manually changes the family, load that family's saved files.
+function sgOnModelFamilyChange() {
+  sgApplyFamilyFiles(document.getElementById('sgModelSelect').value, null);
+  // Different families support different samplers/schedulers — rebuild the lists.
+  sgRebuildSamplerOptions();
+}
+
+function sgSaveCurrentFamily() {
+  const family = document.getElementById('sgModelSelect').value;
+  if (!family) return;
+  const entry = {
+    model_path: document.getElementById('sgModelPath').value,
+    clip_path: document.getElementById('sgClipPath').value,
+    vae_path: document.getElementById('sgVaePath').value,
+    loras: sgGetLoras(),
+  };
+  // Don't persist an all-blank entry — that would wipe a previously-saved
+  // selection if a save fires while the fields are momentarily empty (e.g.
+  // right after switching model families, before re-selecting a run).
+  if (!entry.model_path && !entry.clip_path && !entry.vae_path && entry.loras.length === 0) {
+    return;
+  }
+  sgSavedFamilies[family] = entry;  // optimistic local cache
+  fetch('/api/sample-settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({family, ...entry}),
+  }).catch(() => {});
+}
+
+let sgSaveTimer = null;
+function sgSaveCurrentFamilyDebounced() {
+  clearTimeout(sgSaveTimer);
+  sgSaveTimer = setTimeout(sgSaveCurrentFamily, 600);
+}
+
+// ── LoRA management ──
+function sgRenderLoraEmpty() {
+  const list = document.getElementById('sgLoraList');
+  if (!list.querySelector('.sg-lora-row')) {
+    list.innerHTML = '<div class="sg-lora-empty" id="sgLoraEmpty">No extra LoRAs — only the trained checkpoint is used.</div>';
+  }
+}
+
+function sgAddLora(path = '', weight = 1.0) {
+  sgLoraCounter += 1;
+  const id = sgLoraCounter;
+  const list = document.getElementById('sgLoraList');
+  const empty = document.getElementById('sgLoraEmpty');
+  if (empty) empty.remove();
+
+  const row = document.createElement('div');
+  row.className = 'sg-lora-row';
+  row.id = `sg-lora-${id}`;
+  row.innerHTML = `
+    <input type="text" class="sg-lora-path" placeholder="Path to LoRA (.safetensors)..." spellcheck="false">
+    <button class="btn-browse" onclick="sgBrowseLora(${id})">Browse</button>
+    <span class="sg-lora-weight-wrap">
+      <label>Weight</label>
+      <input type="number" class="sg-lora-weight" step="0.05" value="${weight}">
+    </span>
+    <button class="sg-lora-remove" title="Remove" onclick="sgRemoveLora(${id})">✕</button>`;
+  row.querySelector('.sg-lora-path').value = path || '';
+  list.appendChild(row);
+}
+
+function sgRemoveLora(id) {
+  const row = document.getElementById(`sg-lora-${id}`);
+  if (row) row.remove();
+  sgRenderLoraEmpty();
+  sgSaveCurrentFamily();
+}
+
+async function sgBrowseLora(id) {
+  const row = document.getElementById(`sg-lora-${id}`);
+  if (!row) return;
+  const path = await sgPickModelFile();
+  if (path) {
+    row.querySelector('.sg-lora-path').value = path;
+    sgSaveCurrentFamilyDebounced();  // persist browsed selection
+  }
+}
+
+function sgGetLoras() {
+  return [...document.querySelectorAll('#sgLoraList .sg-lora-row')]
+    .map(row => ({
+      path: row.querySelector('.sg-lora-path').value.trim(),
+      weight: parseFloat(row.querySelector('.sg-lora-weight').value) || 1.0,
+    }))
+    .filter(l => l.path);
+}
+
+// ── Prompt management ──
+function sgAddPrompt(value = '') {
+  sgPromptCounter += 1;
+  const id = sgPromptCounter;
+  const list = document.getElementById('sgPromptList');
+  const row = document.createElement('div');
+  row.className = 'sg-prompt-row';
+  row.id = `sg-prompt-${id}`;
+  row.innerHTML = `
+    <span class="sg-prompt-index"></span>
+    <textarea class="sg-textarea" rows="3" placeholder="Describe the image to generate..."></textarea>
+    <button class="sg-prompt-remove" title="Remove" onclick="sgRemovePrompt(${id})">✕</button>`;
+  row.querySelector('textarea').value = value || '';
+  row.querySelector('textarea').addEventListener('input', sgUpdateOutputInfo);
+  list.appendChild(row);
+  sgRenumberPrompts();
+  sgUpdateOutputInfo();
+  sgUpdateGenerateBtn();
+}
+
+function sgRemovePrompt(id) {
+  const row = document.getElementById(`sg-prompt-${id}`);
+  if (row) row.remove();
+  // Keep at least one prompt row around.
+  if (document.querySelectorAll('#sgPromptList .sg-prompt-row').length === 0) {
+    sgAddPrompt();
+  } else {
+    sgRenumberPrompts();
+    sgUpdateOutputInfo();
+  }
+  sgUpdateGenerateBtn();
+}
+
+function sgRenumberPrompts() {
+  document.querySelectorAll('#sgPromptList .sg-prompt-row').forEach((row, i) => {
+    row.querySelector('.sg-prompt-index').textContent = i + 1;
+  });
+  const count = document.querySelectorAll('#sgPromptList .sg-prompt-row').length;
+  document.getElementById('sgPromptCount').textContent = `${count} prompt${count === 1 ? '' : 's'}`;
+}
+
+function sgGetPrompts() {
+  const neg = document.getElementById('sgNegativePrompt').value;
+  return [...document.querySelectorAll('#sgPromptList .sg-prompt-row textarea')]
+    .map(t => t.value.trim())
+    .filter(t => t)
+    .map(t => ({prompt: t, negative_prompt: neg}));
+}
+
+// ---- Prompt gallery: reusable saved prompts (persisted server-side) ----
+let sgPromptGallery = [];  // [{prompt, negative_prompt}]
+
+async function sgLoadPromptGallery() {
+  try {
+    const res = await fetch('/api/prompt-gallery');
+    const data = await res.json();
+    sgPromptGallery = (data.prompts || []).filter(p => p && p.prompt);
+  } catch (e) {
+    sgPromptGallery = [];
+  }
+  sgRenderPromptGallery();
+}
+
+async function sgPersistPromptGallery() {
+  await fetch('/api/prompt-gallery', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({prompts: sgPromptGallery}),
+  });
+}
+
+function sgRenderPromptGallery() {
+  const list = document.getElementById('sgGalleryList');
+  if (!sgPromptGallery.length) {
+    list.innerHTML = `<div class="sg-gallery-empty">No saved prompts yet — write some prompts, then "Save current".</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  sgPromptGallery.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'sg-gallery-row';
+    const snippet = document.createElement('div');
+    snippet.className = 'sg-gallery-snippet';
+    snippet.textContent = p.prompt;
+    snippet.title = p.prompt + '\n\n(click to add to prompts)';
+    snippet.onclick = () => sgAddGalleryToPrompts(i);
+    const add = document.createElement('button');
+    add.className = 'sg-gallery-add';
+    add.textContent = '+ Add';
+    add.title = 'Add this prompt to the list';
+    add.onclick = () => sgAddGalleryToPrompts(i);
+    const del = document.createElement('button');
+    del.className = 'sg-gallery-del';
+    del.textContent = '✕';
+    del.title = 'Remove from gallery';
+    del.onclick = () => sgRemoveFromGallery(i);
+    row.append(snippet, add, del);
+    list.appendChild(row);
+  });
+}
+
+function sgAddGalleryToPrompts(idx) {
+  const p = sgPromptGallery[idx];
+  if (p) sgAddPrompt(p.prompt);
+}
+
+async function sgRemoveFromGallery(idx) {
+  sgPromptGallery.splice(idx, 1);
+  sgRenderPromptGallery();
+  await sgPersistPromptGallery();
+}
+
+async function sgSaveCurrentPromptsToGallery() {
+  const current = sgGetPrompts();
+  if (!current.length) { alert('Write at least one prompt to save.'); return; }
+  const existing = new Set(sgPromptGallery.map(p => p.prompt));
+  let added = 0;
+  current.forEach(p => {
+    if (!existing.has(p.prompt)) {
+      sgPromptGallery.push({prompt: p.prompt, negative_prompt: ''});
+      existing.add(p.prompt);
+      added += 1;
+    }
+  });
+  sgRenderPromptGallery();
+  await sgPersistPromptGallery();
+}
+
+function sgUpdateGenerateBtn() {
+  const model = document.getElementById('sgModelSelect').value;
+  const isSdxl = SG_SDXL_FAMILY.includes(model);
+  const isZImage = model.startsWith('zimage');
+  const modelPath = document.getElementById('sgModelPath').value.trim();
+  const hasModelPath = !!modelPath;
+  const hasClip = !!document.getElementById('sgClipPath').value.trim();
+  const hasVae = !!document.getElementById('sgVaePath').value.trim();
+
+  // CLIP/VAE requirements depend on the architecture and (for Z-Image) on whether
+  // a single .safetensors transformer or a diffusers folder was picked. SDXL bakes
+  // them in; a Z-Image folder carries them; a single-file Z-Image or Krea2 needs
+  // explicit CLIP + VAE files.
+  let hasClipVae;
+  if (isSdxl) {
+    hasClipVae = true;
+  } else if (isZImage) {
+    const singleFile = /\.safetensors$/i.test(modelPath);
+    hasClipVae = singleFile ? (hasClip && hasVae) : true;
+  } else {
+    hasClipVae = hasClip && hasVae;
+  }
+
+  const ready = sgTrainer && sgWorkspace && sgSelectedConfig && model
+    && hasModelPath && hasClipVae && sgGetPrompts().length > 0;
+  document.getElementById('sgGenerateBtn').disabled = !ready;
+}
+
+// Keep the Generate button in sync as the user edits the form.
+document.getElementById('sgModelSelect').addEventListener('change', sgOnModelFamilyChange);
+['sgModelPath', 'sgClipPath', 'sgVaePath'].forEach(id => {
+  document.getElementById(id).addEventListener('input', sgUpdateGenerateBtn);
+  // Persist model files on blur/commit.
+  document.getElementById(id).addEventListener('change', sgSaveCurrentFamilyDebounced);
+});
+document.getElementById('sgPromptList').addEventListener('input', sgUpdateGenerateBtn);
+document.getElementById('sgNegativePrompt').addEventListener('input', sgUpdateGenerateBtn);
+// Persist LoRA edits (path/weight) on commit.
+document.getElementById('sgLoraList').addEventListener('change', sgSaveCurrentFamilyDebounced);
+
+// ── Stop the running generation ──
+async function sgStopSampling() {
+  const btn = document.getElementById('sgStopBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Stopping…'; }
+  const label = document.getElementById('sgProgressLabel');
+  if (label) label.textContent = 'Stopping after the current image…';
+  try { await fetch('/api/stop-sampling', {method: 'POST'}); } catch {}
+}
+
+// ── Delete the samples created by a stopped run ──
+async function sgDeleteSamples() {
+  const resultEl = document.getElementById('sgResult');
+  try {
+    const res = await fetch('/api/delete-samples', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({files: sgLastRunFiles}),
+    });
+    const data = await res.json();
+    resultEl.innerHTML = `<div class="sg-result-box">
+      <div class="sg-section-title" style="margin-bottom:6px">Deleted</div>
+      <div style="font-size:0.9em;">Removed <strong>${data.deleted}</strong> sample file(s).</div>
+    </div>`;
+  } catch (e) {
+    alert('Failed to delete samples: ' + e.message);
+  }
+  sgLastRunFiles = [];
+}
+
+// ── Generate ──
+// Parse a numeric field but keep a valid 0 (|| would clobber it back to the
+// default) — cfg 0 disables CFG, shift 0 is a valid shift.
+function sgNum(id, fallback) {
+  const v = parseFloat(document.getElementById(id).value);
+  return Number.isFinite(v) ? v : fallback;
+}
+function sgGetSamplerSettings() {
+  return {
+    name: document.getElementById('sgSampler').value,
+    scheduler: document.getElementById('sgScheduler').value,
+    steps: parseInt(document.getElementById('sgSteps').value) || 20,
+    cfg: sgNum('sgCfg', 7),
+    width: parseInt(document.getElementById('sgWidth').value) || 1024,
+    height: parseInt(document.getElementById('sgHeight').value) || 1024,
+    seed: parseInt(document.getElementById('sgSeed').value) || 42,
+    shift: sgNum('sgShift', 3),
+  };
+}
+
+// Persist the current sampler settings as this family's default.
+function sgSaveFamilySampler() {
+  const family = document.getElementById('sgModelSelect').value;
+  if (!family) return;
+  const sampler = sgGetSamplerSettings();
+  (sgSavedFamilies[family] ||= {}).sampler = sampler;  // optimistic local cache
+  fetch('/api/sample-settings', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({family, sampler}),
+  }).catch(() => {});
+}
+
+let sgSamplerSaveChoice = null;  // session-remembered dialog choice (true/false/null)
+
+// Resolver for the resume dialog (set while the modal is open).
+let _sgResumeResolve = null;
+function sgResolveResume(choice) {
+  document.getElementById('sgResumeDialog').classList.remove('open');
+  const r = _sgResumeResolve; _sgResumeResolve = null;
+  if (r) r(choice);
+}
+
+// Ask the backend whether samples already exist for this run; if so, pop the
+// resume dialog. Resolves to 'new', 'continue', or null (cancel).
+async function sgResolveGenerationMode(numPrompts) {
+  let info;
+  try {
+    const res = await fetch('/api/check-existing-samples', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        trainer: sgTrainer,
+        run_dir: sgWorkspace,
+        config_file: sgSelectedConfig.config_file,
+        num_prompts: numPrompts,
+      }),
+    });
+    info = await res.json();
+  } catch {
+    return 'new';  // check failed — fall back to a normal full run
+  }
+  if (!info || !info.existing_images) return 'new';  // nothing to resume
+
+  document.getElementById('sgResumeBody').innerHTML =
+    `<strong>${info.existing_images}</strong> of <strong>${info.total_images}</strong> ` +
+    `sample image(s) already exist for this run ` +
+    `(${info.done_steps}/${info.total_steps} checkpoints complete).<br><br>` +
+    `<strong>Continue</strong> skips what's already there and renders only the ` +
+    `remaining <strong>${info.remaining_images}</strong> image(s). ` +
+    `<strong>Regenerate all</strong> re-renders everything, replacing the existing images.`;
+  document.getElementById('sgResumeDialog').classList.add('open');
+  return await new Promise(resolve => { _sgResumeResolve = resolve; });
+}
+
+// Clicking Generate first asks whether to persist the sampler settings.
+function generateSamples() {
+  if (!sgGetPrompts().length) { alert('Add at least one prompt.'); return; }
+  if (sgSamplerSaveChoice !== null) { _runGenerateSamples(sgSamplerSaveChoice); return; }
+  const fam = document.getElementById('sgModelSelect').value;
+  document.getElementById('sgSaveDialogFamily').textContent = (sgModels[fam] || {}).label || 'this model';
+  document.getElementById('sgSaveDialogRemember').checked = false;
+  document.getElementById('sgSaveDialog').classList.add('open');
+}
+
+function sgCloseSaveDialog() {
+  document.getElementById('sgSaveDialog').classList.remove('open');
+}
+
+function sgConfirmGenerate(save) {
+  if (document.getElementById('sgSaveDialogRemember').checked) sgSamplerSaveChoice = save;
+  sgCloseSaveDialog();
+  _runGenerateSamples(save);
+}
+
+async function _runGenerateSamples(saveSampler) {
+  const prompts = sgGetPrompts();
+  if (!prompts.length) { alert('Add at least one prompt.'); return; }
+
+  // Remember this family's model files + LoRAs for next time (always).
+  sgSaveCurrentFamily();
+  // Optionally persist the sampler settings as the family default.
+  if (saveSampler) sgSaveFamilySampler();
+
+  const payload = {
+    trainer: sgTrainer,
+    run_dir: sgWorkspace,
+    config_file: sgSelectedConfig.config_file,
+    model: document.getElementById('sgModelSelect').value,
+    model_path: document.getElementById('sgModelPath').value,
+    clip_path: document.getElementById('sgClipPath').value,
+    vae_path: document.getElementById('sgVaePath').value,
+    loras: sgGetLoras(),
+    sampler: sgGetSamplerSettings(),
+    prompts: prompts,
+    mode: 'new',
+  };
+
+  // If samples for this run already exist, ask whether to resume (skip them)
+  // or regenerate everything. Returns null if the user cancels.
+  const mode = await sgResolveGenerationMode(prompts.length);
+  if (mode === null) return;  // cancelled
+  payload.mode = mode;
+
+  const btn = document.getElementById('sgGenerateBtn');
+  btn.disabled = true;
+  document.getElementById('sgEvaluateBtn').disabled = true;  // re-locked until this run finishes
+  const resultEl = document.getElementById('sgResult');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `<div class="sg-result-box">
+      <div class="sg-section-title" style="margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+        <span>Generating Samples</span>
+        <button class="sg-stop-btn" id="sgStopBtn" onclick="sgStopSampling()">■ Stop</button>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="sgProgressBar" style="width:0%"></div></div>
+      <div class="progress-label" id="sgProgressLabel">Loading model…</div>
+    </div>`;
+  resultEl.scrollIntoView({behavior: 'smooth', block: 'start'});
+  const bar = document.getElementById('sgProgressBar');
+  const label = document.getElementById('sgProgressLabel');
+
+  const poll = setInterval(async () => {
+    try {
+      const p = await (await fetch('/api/sampling-progress')).json();
+      if (p.phase === 'loading') {
+        label.textContent = p.label || 'Loading model…';
+      } else if (p.total > 0) {
+        const pct = Math.round((p.current / p.total) * 100);
+        bar.style.width = pct + '%';
+        label.textContent = `${p.label || ''} — ${p.current}/${p.total}`;
+      }
+    } catch {}
+  }, 700);
+
+  try {
+    const res = await fetch('/api/generate-samples', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    clearInterval(poll);
+    const data = await res.json();
+    if (!res.ok) {
+      bar.style.width = '0%';
+      resultEl.innerHTML = `<div class="sg-result-box" style="border-color:var(--neon-orange)">
+        <div class="sg-section-title" style="margin-bottom:6px; color:var(--neon-orange)">Generation Failed</div>
+        <div style="font-size:0.8em; line-height:1.5; white-space:pre-wrap; font-family:'JetBrains Mono',monospace;">${(data.detail || 'Unknown error')}</div>
+      </div>`;
+      return;
+    }
+    if (data.status === 'stopped') {
+      // Stopped mid-run — offer to delete the partial samples.
+      bar.style.width = '0%';
+      sgLastRunFiles = data.files || [];
+      resultEl.innerHTML = `<div class="sg-result-box" style="border-color:var(--neon-amber)">
+        <div class="sg-section-title" style="margin-bottom:6px; color:var(--neon-amber)">Stopped</div>
+        <div style="font-size:0.9em; line-height:1.8;">
+          Stopped after <strong>${data.generated}</strong> image(s).<br>
+          Delete the samples created in this run?
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="sg-del-btn" onclick="sgDeleteSamples()">Delete ${sgLastRunFiles.length} samples</button>
+            <button class="sg-keep-btn" onclick="document.getElementById('sgResult').style.display='none'">Keep them</button>
+          </div>
+        </div>
+      </div>`;
+      return;
+    }
+    bar.style.width = '100%';
+    // Remember exactly which run was generated so Evaluate pre-fills it,
+    // even if the user changes selections afterwards.
+    sgGeneratedRun = {trainer: sgTrainer, workspace: sgWorkspace, config_file: sgSelectedConfig.config_file};
+    document.getElementById('sgEvaluateBtn').disabled = false;
+    const skippedNote = data.skipped
+      ? ` <span style="color:var(--text-dim)">(${data.skipped} already existed, skipped)</span>` : '';
+    resultEl.innerHTML = `<div class="sg-result-box">
+      <div class="sg-section-title" style="margin-bottom:6px">✓ Done</div>
+      <div style="font-size:0.9em; line-height:1.8;">
+        Generated <strong>${data.generated}</strong> image(s)${skippedNote}
+        across <strong>${data.steps.length}</strong> checkpoint(s) × <strong>${data.prompts}</strong> prompt(s).<br>
+        Saved to:<br><span style="font-family:'JetBrains Mono',monospace; font-size:0.85em; color:var(--neon-cyan)">${data.output_dir}</span>
+        <br><span style="color:var(--neon-green)">Click <strong>Evaluate &rarr;</strong> to compare these samples.</span>
+      </div>
+    </div>`;
+  } catch (e) {
+    clearInterval(poll);
+    resultEl.innerHTML = `<div class="sg-result-box" style="border-color:var(--neon-orange)">
+      <div class="sg-section-title" style="margin-bottom:6px; color:var(--neon-orange)">Error</div>
+      <div style="font-size:0.85em;">${e.message}</div>
+    </div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Jump to the Evaluator pre-filled with the run we just generated ──
+async function evaluateGeneratedRun() {
+  const gen = sgGeneratedRun;
+  if (!gen) return;
+
+  // Switch to the evaluator view.
+  if (document.getElementById('sampleGenView').style.display !== 'none') toggleView();
+
+  // Pre-fill trainer (onTrainerChange reads the select value + resets the wizard).
+  document.getElementById('trainerSelect').value = gen.trainer;
+  onTrainerChange();
+
+  // Pre-fill workspace and load its runs (the generated samples now live there).
+  workspacePath = gen.workspace;
+  document.getElementById('workspacePath').value = gen.workspace;
+  await loadConfigs();
+
+  // Select the matching run so the user can go straight to Run Comparison.
+  const idx = configs.findIndex(c => c.config_file === gen.config_file);
+  if (idx >= 0) {
+    toggleConfig(idx);
+    document.getElementById('config-' + idx).scrollIntoView({block: 'nearest'});
+  } else {
+    alert('Generated run loaded — select it from the list to run the comparison.');
+  }
+}
+
+// ── File picker (model/clip/vae/lora) ──
+async function sgPickModelFile() {
+  const res = await fetch('/api/select-file', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      title: 'Select file',
+      filetypes: [["Models", "*.safetensors *.ckpt *.pt *.pth *.gguf"], ["All files", "*.*"]],
+    })
+  });
+  const data = await res.json();
+  return data.path || '';
+}
+
+async function sgBrowseFile(inputId) {
+  const path = await sgPickModelFile();
+  if (path) {
+    document.getElementById(inputId).value = path;
+    sgUpdateGenerateBtn();
+    sgSaveCurrentFamilyDebounced();  // persist browsed model/CLIP/VAE selection
+  }
 }
 </script>
 

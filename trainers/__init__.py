@@ -30,3 +30,56 @@ TRAINERS = {
     "kohya_ss": "Kohya SS",
     "musubi_tuner": "MusubiTuner",
 }
+
+
+# Supported base models for sample generation, grouped for the UI dropdown.
+# Keys are stable identifiers; labels are display names. The "group" field
+# lets the frontend render SDXL variants under a single optgroup.
+SAMPLE_MODELS = {
+    "sdxl":          {"label": "SDXL",          "group": "SDXL"},
+    "pony":          {"label": "Pony",          "group": "SDXL"},
+    "illustrious":   {"label": "Illustrious",   "group": "SDXL"},
+    "noobai":        {"label": "NoobAI",        "group": "SDXL"},
+    "anima":         {"label": "Anima",         "group": None},
+    "zimage_base":   {"label": "Z-Image Base",  "group": None},
+    "zimage_turbo":  {"label": "Z-Image Turbo", "group": None},
+    "krea2":         {"label": "Krea2",         "group": None},
+}
+
+
+def detect_sdxl_variant(model_ref: str) -> str:
+    """Guess the SDXL family variant from a model name/path.
+
+    Returns one of: 'pony', 'illustrious', 'noobai', 'sdxl' (fallback).
+    """
+    ref = (model_ref or "").lower()
+    if "noob" in ref:
+        return "noobai"
+    if "illustrious" in ref or "illust" in ref or "ilxl" in ref:
+        return "illustrious"
+    if "pony" in ref:
+        return "pony"
+    return "sdxl"
+
+
+# Default empty result for inspect_for_sampling, so every trainer returns the
+# same shape regardless of whether anything was recognized.
+def empty_sampling_info() -> dict:
+    return {
+        "model": "",
+        "model_path": "",
+        "clip_path": "",
+        "vae_path": "",
+        "sampler": {
+            "name": "",
+            "scheduler": "",
+            "steps": 20,
+            "cfg": 7.0,
+            "width": 1024,
+            "height": 1024,
+            "seed": 42,
+            "shift": 3.0,
+        },
+        "prompts": [],
+        "negative_prompt": "",
+    }
