@@ -83,9 +83,14 @@ Anima highlights:
   the adapter's *source* plus T5 `input_ids` as its *target* tokens (the T5 model
   itself is never run). Qwen3 configs + both tokenizers are vendored for offline
   loading (`samplers/anima/assets/`).
-- LoRAs use the kohya/ComfyUI `lora_unet_…` convention (underscore-flattened
-  module paths), merged into the DiT weights by walking the model to rebuild the
-  name map (`self_attn` etc. make the flattening non-reversible by string surgery).
+- LoRAs come in two conventions and both are handled: the trainer's kohya
+  `lora_unet_…` (underscore-flattened module paths + `alpha`, merged by walking the
+  model to rebuild the name map — `self_attn` etc. make the flattening
+  non-reversible by string surgery) **and** the native/PEFT
+  `diffusion_model.<dotted path>.lora_A`/`lora_B` form used by ComfyUI-side LoRAs
+  like the **turbo** distillation LoRA (also targets `llm_adapter` blocks; no
+  `alpha` → scale 1.0), resolved by dotted path directly. A turbo LoRA at ~8 steps
+  needs an empty negative / CFG 1 (it's distilled for no guidance).
 - Sampling is rectified-flow Euler (linear `1 → 0` sigmas, no shift, doubled-batch
   CFG), so the only sampler/scheduler exposed is `euler` / `normal`.
 
